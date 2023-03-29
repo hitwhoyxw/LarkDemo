@@ -3,6 +3,7 @@ package com.android.larkdemo;
 import android.app.Application;
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -35,6 +36,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                                 @Override
                                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                                     // 在插入数据之前进行操作
+                                    //检测到收到消息后是插入eventv3表，tea_event_index=10352|10353,显示为native网络请求，怀疑消息不在这里插入
                                     String table = (String) param.args[0]; // 数据表名
                                     ContentValues values = (ContentValues) param.args[2]; // 数据内容
                                     XposedBridge.log(TAG+ "Inserting data into table " + table + ": " + values);
@@ -43,38 +45,28 @@ public class HookEntry implements IXposedHookLoadPackage {
                     XposedHelpers.findAndHookMethod(DATABASENAME, dexClassLoader, "query", String.class, String[].class, String.class, String[].class, String.class, String.class, String.class, String.class, new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            super.beforeHookedMethod(param);
-                            String table = (String) param.args[0];
-                            String[] columns = (String[]) param.args[1];
-                            String selection = (String) param.args[2];
-                            String[] selectionArgs = (String[]) param.args[3];
-                            String groupBy = (String) param.args[4];
-                            String having = (String) param.args[5];
-                            String orderBy = (String) param.args[6];
-                            String limit = (String) param.args[7];
-                            XposedBridge.log(TAG+"Query data begin");
-                            XposedBridge.log(TAG+"Query data from table"+table+"columns"+columns);
-                            XposedBridge.log(TAG+"Query data from table"+table+"selection:"+selection);
-                            XposedBridge.log(TAG+"Query data from table"+table+"selectionArgs:"+selectionArgs);
-                            XposedBridge.log(TAG+"Query data end");
+                            LogUtil.PrintStackTrace();
                         }
+
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                            super.afterHookedMethod(param);
+                            Cursor cursor = (Cursor) param.getResult();
+                            LogUtil.PrintDatabaseQuery(cursor);
                         }
                     });
 
-                    XposedHelpers.findAndHookMethod(DATABASENAME,dexClassLoader, "rawQuery", String.class, String[].class, new XC_MethodHook() {
+                    //msgtype 6可疑
+                    //type =traffic_packets
+                    XposedHelpers.findAndHookMethod(DATABASENAME, dexClassLoader, "rawQuery", String.class, String[].class, new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            // 获取查询参数
-                            String sql = (String) param.args[0];
-                            String[] selectionArgs = (String[]) param.args[1];
-                            // 输出查询参数
-                            XposedBridge.log(TAG+"rawQuery data begin");
-                            XposedBridge.log(TAG+"rawQuery sql: " + sql);
-                            XposedBridge.log(TAG+ "rawQuery selectionArgs: " + selectionArgs);
-                            XposedBridge.log(TAG+"rawQuery data end");
+                            LogUtil.PrintStackTrace();
+                        }
+
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            Cursor cursor = (Cursor) param.getResult();
+                            LogUtil.PrintDatabaseQuery(cursor);
                         }
                     });
                 }

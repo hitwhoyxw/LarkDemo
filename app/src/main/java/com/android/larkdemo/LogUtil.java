@@ -1,6 +1,7 @@
 package com.android.larkdemo;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.os.Environment;
 
 import java.io.File;
@@ -10,29 +11,71 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+import de.robv.android.xposed.XposedBridge;
+
 public class LogUtil {
-    private static final String TAG="LogUtil";
-    private static final String fileName="LarkDemo_Log.txt";
-    private static final String dirName="LarkDemo";
-    private static File file=null;
-    private static FileWriter fileWriter=null;
-    public static void Write(Context context,String log){
-        try{
-            File logDir=new File(Environment.getExternalStorageDirectory(),dirName);
+    private static final String TAG = "LogUtil";
+    private static final String fileName = "LarkDemo_Log.txt";
+    private static final String dirName = "LarkDemo";
+    private static File file = null;
+    private static FileWriter fileWriter = null;
+
+    public static void Write(Context context, String log) {
+        try {
+            File logDir = new File(Environment.getExternalStorageDirectory(), dirName);
             if (!logDir.exists()){
                 logDir.mkdir();
             }
             if (file==null){
-                file=new File(logDir,fileName);
+                file = new File(logDir, fileName);
             }
-            if (fileWriter==null){
-                fileWriter=new FileWriter(file,true);
+            if (fileWriter == null) {
+                fileWriter = new FileWriter(file, true);
             }
             String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
-            fileWriter.write(timeStamp+log+"\n");
+            fileWriter.write(timeStamp + log + "\n");
             fileWriter.flush();
         } catch (IOException e) {
 
+        }
+    }
+
+    public static void PrintStackTrace() {
+        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+        int count = 0;
+        XposedBridge.log(TAG + "-------------------------stackTrace----------------------------------");
+        for (int i = 0; i < stackTraceElements.length && count < 5; i++) {
+            String className = stackTraceElements[i].getClassName();
+            if (!className.startsWith("de.robv.android.xposed") && !className.startsWith("com.android.larkdemo")) {
+                XposedBridge.log(TAG + stackTraceElements[i].toString());
+                count++;
+            }
+        }
+        XposedBridge.log(TAG + "-------------------------stackTrace----------------------------------");
+    }
+
+    public static void PrintDatabaseQuery(Cursor cursor) {
+        XposedBridge.log(TAG + "query data result begin");
+        try {
+            if (cursor != null && cursor.moveToFirst()) {
+                int count = cursor.getCount();
+                for (int i = 0; i < count; i++) {
+                    StringBuilder stringBuilder = new StringBuilder();
+                    for (int j = 0; j < cursor.getColumnCount(); j++) {
+                        stringBuilder.append(cursor.getColumnName(j)).append(": ");
+                        boolean isBlob = cursor.getType(j) == Cursor.FIELD_TYPE_BLOB;
+                        if (isBlob) {
+                            stringBuilder.append(new String(cursor.getBlob(j))).append(", ");
+                        }
+                    }
+                    XposedBridge.log(TAG + stringBuilder.toString());
+                    cursor.moveToNext();
+                }
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        } finally {
+            XposedBridge.log(TAG + "query data result end");
         }
     }
 }
