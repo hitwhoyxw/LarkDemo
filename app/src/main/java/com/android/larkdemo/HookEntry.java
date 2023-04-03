@@ -4,6 +4,10 @@ import android.app.Application;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
+import android.database.DatabaseErrorHandler;
+import android.database.sqlite.SQLiteDatabase;
+
+import java.io.File;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -30,9 +34,10 @@ public class HookEntry implements IXposedHookLoadPackage {
                         XposedBridge.log("cannot get classloader return ");
                         return ;
                     }
+                    /*
                     XposedHelpers.findAndHookMethod(DATABASENAME,
-                            dexClassLoader, "insert", String.class, String.class,
-                            ContentValues.class, new XC_MethodHook() {
+                            dexClassLoader, "insertWithOnConflict", String.class, String.class,
+                            ContentValues.class,int.class, new XC_MethodHook() {
                                 @Override
                                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                                     // 在插入数据之前进行操作
@@ -42,6 +47,9 @@ public class HookEntry implements IXposedHookLoadPackage {
                                     XposedBridge.log(TAG+ "Inserting data into table " + table + ": " + values);
                                 }
                             });
+
+                     */
+                    /*
                     XposedHelpers.findAndHookMethod(DATABASENAME, dexClassLoader, "query", String.class, String[].class, String.class, String[].class, String.class, String.class, String.class, String.class, new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -67,6 +75,40 @@ public class HookEntry implements IXposedHookLoadPackage {
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                             Cursor cursor = (Cursor) param.getResult();
                             LogUtil.PrintDatabaseQuery(cursor);
+                        }
+                    });
+
+                     */
+                    /*
+                    XposedHelpers.findAndHookMethod(DATABASENAME, dexClassLoader, "openOrCreateDatabase", String.class, byte[].class,SQLiteDatabase.CursorFactory.class, DatabaseErrorHandler.class, String.class, new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            String password=(String) param.args[3];
+                            XposedBridge.log("password:"+password);
+                        }
+                    });
+                    XposedHelpers.findAndHookMethod(DATABASENAME, dexClassLoader, "openOrCreateDatabase", File.class, SQLiteDatabase.CursorFactory.class, DatabaseErrorHandler.class, String.class, new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            String password=(String) param.args[3];
+                            XposedBridge.log("password:"+password);
+                        }
+                    });
+
+                    //net.sqlcipher.database.SQLiteOpenHelper里面getWritableDatabase带了参数 一个是char[],一个是byte[],应该是密码，然后调用的sqlite的openOrCreateDatabase
+                     */
+                    XposedHelpers.findAndHookMethod("net.sqlcipher.database.SQLiteOpenHelper", dexClassLoader, "getWritableDatabase", char[].class, new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            char[] password = (char[]) param.args[0];
+                            XposedBridge.log("password char array:" + password);
+                        }
+                    });
+                    XposedHelpers.findAndHookMethod("net.sqlcipher.database.SQLiteOpenHelper", dexClassLoader, "getWritableDatabase", byte[].class, new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            byte[] password = (byte[]) param.args[0];
+                            XposedBridge.log("password byte array:" + password);
                         }
                     });
                 }
