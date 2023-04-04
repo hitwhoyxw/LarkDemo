@@ -55,11 +55,12 @@ public class LogUtil {
     }
 
     public static void PrintDatabaseQuery(Cursor cursor, String tag) {
-
+        XposedBridge.log("-------------------------query " + tag + " data----------------------------------");
+        PrintDatabaseQuery(cursor);
+        XposedBridge.log("-------------------------query " + tag + " data----------------------------------");
     }
 
     public static void PrintDatabaseQuery(Cursor cursor) {
-        XposedBridge.log(TAG + "-------------------------query data----------------------------------");
         try {
             if (cursor != null && cursor.moveToFirst()) {
                 int count = cursor.getCount();
@@ -79,7 +80,6 @@ public class LogUtil {
         } catch (Exception exception) {
             exception.printStackTrace();
         } finally {
-            XposedBridge.log(TAG + "query data result end");
         }
     }
 }

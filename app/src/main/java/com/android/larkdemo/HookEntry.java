@@ -6,8 +6,8 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
-
 import java.io.File;
+import java.lang.reflect.Method;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -16,23 +16,22 @@ import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 public class HookEntry implements IXposedHookLoadPackage {
-    public static String PACKAGENAME="com.ss.android.lark";
-    public static String DATABASENAME="android.database.sqlite.SQLiteDatabase";
-    public  static String TAG="LarkHookDemo";
-    public static ClassLoader dexClassLoader=null;
+    public static String TAG = "LarkHookDemo";
+    public static byte[] bytes;
+    public static ClassLoader dexClassLoader = null;
     public static ClassLoader classLoader=null;
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
-        if (loadPackageParam.packageName.equals(PACKAGENAME)) {
-            XposedBridge.log(TAG+" has Hooked!");
-            XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class,new XC_MethodHook() {
+        if (loadPackageParam.packageName.equals(HookUtils.XPOSED_HOOK_PACKAGE)) {
+            XposedBridge.log(TAG + " has Hooked!");
+            XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    Context context=(Context) param.args[0];
+                    Context context = (Context) param.args[0];
                     //拿到真正的类加载器
-                    dexClassLoader=context.getClassLoader();
-                    if (dexClassLoader==null){
+                    dexClassLoader = context.getClassLoader();
+                    if (dexClassLoader == null) {
                         XposedBridge.log("cannot get classloader return ");
-                        return ;
+                        return;
                     }
                     /*
                     XposedHelpers.findAndHookMethod(DATABASENAME,
@@ -49,8 +48,8 @@ public class HookEntry implements IXposedHookLoadPackage {
                             });
 
                      */
-                    /*
-                    XposedHelpers.findAndHookMethod(DATABASENAME, dexClassLoader, "query", String.class, String[].class, String.class, String[].class, String.class, String.class, String.class, String.class, new XC_MethodHook() {
+
+                    /*XposedHelpers.findAndHookMethod(DATABASENAME, dexClassLoader, "query", String.class, String[].class, String.class, String[].class, String.class, String.class, String.class, String.class, new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                             LogUtil.PrintStackTrace();
@@ -62,23 +61,23 @@ public class HookEntry implements IXposedHookLoadPackage {
                             LogUtil.PrintDatabaseQuery(cursor);
                         }
                     });
-
-                    //msgtype 6可疑
+*/                    //msgtype 6可疑
                     //type =traffic_packets
-                    XposedHelpers.findAndHookMethod(DATABASENAME, dexClassLoader, "rawQuery", String.class, String[].class, new XC_MethodHook() {
+                    /*XposedHelpers.findAndHookMethod(DATABASENAME, dexClassLoader, "rawQuery", String.class, String[].class, new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            LogUtil.PrintStackTrace();
+
+                            try{
+
+                            }
+                            Cursor cursor=
                         }
 
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                            Cursor cursor = (Cursor) param.getResult();
-                            LogUtil.PrintDatabaseQuery(cursor);
-                        }
-                    });
 
-                     */
+                        }
+                    });*/
                     /*
                     XposedHelpers.findAndHookMethod(DATABASENAME, dexClassLoader, "openOrCreateDatabase", String.class, byte[].class,SQLiteDatabase.CursorFactory.class, DatabaseErrorHandler.class, String.class, new XC_MethodHook() {
                         @Override
@@ -97,6 +96,7 @@ public class HookEntry implements IXposedHookLoadPackage {
 
                     //net.sqlcipher.database.SQLiteOpenHelper里面getWritableDatabase带了参数 一个是char[],一个是byte[],应该是密码，然后调用的sqlite的openOrCreateDatabase
                      */
+                    //hook sqliteopenhelper的getwritabledatabase，获得参数中的数据库密码
                     XposedHelpers.findAndHookMethod("net.sqlcipher.database.SQLiteOpenHelper", dexClassLoader, "getWritableDatabase", char[].class, new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -111,9 +111,28 @@ public class HookEntry implements IXposedHookLoadPackage {
                             XposedBridge.log("password byte array:" + password);
                         }
                     });
+
+                    //获得数据库 打印自定义查询
+                    XposedHelpers.findAndHookMethod(HookUtils.SQLCIPHER_OPENHELPER, dexClassLoader, "getWritableDatabase", byte[].class, new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+
+                            Class<?> SqlCipherClass = Class.forName(HookUtils.SQLCIPER_DATABASE);
+                            Object db = param.getResult();
+                            if (db != null && db.getClass().getName().equals(HookUtils.SQLCIPER_DATABASE)) {
+
+                                Object cipherDB = ((Class<?>) SqlCipherClass).cast(db);
+                                Method query = SqlCipherClass.getMethod("rawQuery", String.class, String[].class);
+                                String sql = "SELECT name FROM sqlite_master WHERE type='table';";
+                                Cursor cursor = (Cursor) query.invoke(cipherDB, sql, null, null);
+                                LogUtil.PrintDatabaseQuery(cursor, "TABLE");
+
+
+                            }
+                        }
+                    });
                 }
             });
-
         }
     }
 }
