@@ -6,6 +6,8 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
+import android.util.Log;
+
 import java.io.File;
 import java.lang.reflect.Method;
 
@@ -33,22 +35,26 @@ public class HookEntry implements IXposedHookLoadPackage {
                         XposedBridge.log("cannot get classloader return ");
                         return;
                     }
-                    /*
-                    XposedHelpers.findAndHookMethod(DATABASENAME,
+                    XposedHelpers.findAndHookMethod(HookUtils.SQLITE_DATABASE,
                             dexClassLoader, "insertWithOnConflict", String.class, String.class,
-                            ContentValues.class,int.class, new XC_MethodHook() {
+                            ContentValues.class, int.class, new XC_MethodHook() {
                                 @Override
                                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                                    // 在插入数据之前进行操作
-                                    //检测到收到消息后是插入eventv3表，tea_event_index=10352|10353,显示为native网络请求，怀疑消息不在这里插入
                                     String table = (String) param.args[0]; // 数据表名
                                     ContentValues values = (ContentValues) param.args[2]; // 数据内容
-                                    XposedBridge.log(TAG+ "Inserting data into table " + table + ": " + values);
+                                    LogUtil.PrintInsert(table, values, "sqlite:insertWithOnConflict");
                                 }
                             });
-
-                     */
-
+                    //insertWithOnConflict("MessageStore", null, contentValues, 5)存消息
+                    XposedHelpers.findAndHookMethod(HookUtils.SQLCIPER_DATABASE, dexClassLoader, "insertWithOnConflict", String.class, String.class, ContentValues.class, int.class, new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            XposedBridge.log("insertWithOnConflict hooked");
+                            String table = (String) param.args[0];
+                            ContentValues values = (ContentValues) param.args[2];
+                            LogUtil.PrintInsert(table, values, "sqlcipher insert hook");
+                        }
+                    });
                     /*XposedHelpers.findAndHookMethod(DATABASENAME, dexClassLoader, "query", String.class, String[].class, String.class, String[].class, String.class, String.class, String.class, String.class, new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -97,7 +103,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                     //net.sqlcipher.database.SQLiteOpenHelper里面getWritableDatabase带了参数 一个是char[],一个是byte[],应该是密码，然后调用的sqlite的openOrCreateDatabase
                      */
                     //hook sqliteopenhelper的getwritabledatabase，获得参数中的数据库密码
-                    XposedHelpers.findAndHookMethod("net.sqlcipher.database.SQLiteOpenHelper", dexClassLoader, "getWritableDatabase", char[].class, new XC_MethodHook() {
+                   /* XposedHelpers.findAndHookMethod("net.sqlcipher.database.SQLiteOpenHelper", dexClassLoader, "getWritableDatabase", char[].class, new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                             char[] password = (char[]) param.args[0];
@@ -110,27 +116,10 @@ public class HookEntry implements IXposedHookLoadPackage {
                             byte[] password = (byte[]) param.args[0];
                             XposedBridge.log("password byte array:" + password);
                         }
-                    });
+                    });*/
 
                     //获得数据库 打印自定义查询
-                    XposedHelpers.findAndHookMethod(HookUtils.SQLCIPHER_OPENHELPER, dexClassLoader, "getWritableDatabase", byte[].class, new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
 
-                            Class<?> SqlCipherClass = Class.forName(HookUtils.SQLCIPER_DATABASE);
-                            Object db = param.getResult();
-                            if (db != null && db.getClass().getName().equals(HookUtils.SQLCIPER_DATABASE)) {
-
-                                Object cipherDB = ((Class<?>) SqlCipherClass).cast(db);
-                                Method query = SqlCipherClass.getMethod("rawQuery", String.class, String[].class);
-                                String sql = "SELECT name FROM sqlite_master WHERE type='table';";
-                                Cursor cursor = (Cursor) query.invoke(cipherDB, sql, null, null);
-                                LogUtil.PrintDatabaseQuery(cursor, "TABLE");
-
-
-                            }
-                        }
-                    });
                 }
             });
         }

@@ -1,5 +1,6 @@
 package com.android.larkdemo;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.os.Environment;
@@ -38,6 +39,22 @@ public class LogUtil {
         } catch (IOException e) {
 
         }
+    }
+
+    public static void PrintLog(String msg, String tag) {
+        XposedBridge.log("-------------------------" + tag + "----------------------------------");
+        XposedBridge.log(msg);
+        XposedBridge.log("-------------------------" + tag + "----------------------------------");
+    }
+
+    public static void PrintInsert(String table, ContentValues contentValues, String tag) {
+        XposedBridge.log("-------------------------" + tag + "----------------------------------");
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("table:");
+        stringBuilder.append(table);
+        stringBuilder.append(contentValues.toString());
+        XposedBridge.log(stringBuilder.toString());
+        XposedBridge.log("-------------------------" + tag + "----------------------------------");
     }
 
     public static void PrintStackTrace() {
