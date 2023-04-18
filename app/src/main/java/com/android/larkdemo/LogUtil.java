@@ -16,18 +16,18 @@ import de.robv.android.xposed.XposedBridge;
 
 public class LogUtil {
     private static final String TAG = "LogUtil";
-    private static final String fileName = "LarkDemo_Log.txt";
-    private static final String dirName = "LarkDemo";
+    private static final String fileName = "Demo_Log.txt";
+    private static final String dirName = "Demo";
     private static File file = null;
     private static FileWriter fileWriter = null;
 
     public static void Write(Context context, String log) {
         try {
             File logDir = new File(Environment.getExternalStorageDirectory(), dirName);
-            if (!logDir.exists()){
+            if (!logDir.exists()) {
                 logDir.mkdir();
             }
-            if (file==null){
+            if (file == null) {
                 file = new File(logDir, fileName);
             }
             if (fileWriter == null) {
@@ -42,12 +42,14 @@ public class LogUtil {
     }
 
     public static void PrintLog(String msg, String tag) {
+        XposedBridge.log("");
         XposedBridge.log("-------------------------" + tag + "----------------------------------");
         XposedBridge.log(msg);
         XposedBridge.log("-------------------------" + tag + "----------------------------------");
     }
 
     public static void PrintInsert(String table, ContentValues contentValues, String tag) {
+        XposedBridge.log("");
         XposedBridge.log("-------------------------" + tag + "----------------------------------");
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("table:");
@@ -72,6 +74,7 @@ public class LogUtil {
     }
 
     public static void PrintDatabaseQuery(Cursor cursor, String tag) {
+        XposedBridge.log("");
         XposedBridge.log("-------------------------query " + tag + " data----------------------------------");
         PrintDatabaseQuery(cursor);
         XposedBridge.log("-------------------------query " + tag + " data----------------------------------");
@@ -90,6 +93,7 @@ public class LogUtil {
                             stringBuilder.append(new String(cursor.getBlob(j))).append(", ");
                         }
                     }
+                    XposedBridge.log("");
                     XposedBridge.log(TAG + stringBuilder.toString());
                     cursor.moveToNext();
                 }
