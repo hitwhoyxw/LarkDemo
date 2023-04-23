@@ -26,7 +26,7 @@ public class HookEntry implements IXposedHookLoadPackage {
     public static ClassLoader classLoader = null;
     private static String mDatabasePath = "";
     private static String mDatabasePassword = "";
-    private static boolean isDatabaseOpened = false;
+    private static int isDatabaseOpened = -1;
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
@@ -41,48 +41,41 @@ public class HookEntry implements IXposedHookLoadPackage {
                         XposedBridge.log("cannot get classloader return ");
                         return;
                     }
-
-                    /*Class<?> cls = XposedHelpers.findClass("android.database.sqlite.SQLiteDatabase",dexClassLoader);
-                    XposedHelpers.findAndHookMethod(cls, "insertWithOnConflict", String.class, String.class, ContentValues.class, int.class, new XC_MethodHook() {
+                    XposedHelpers.findAndHookMethod(SQLiteDatabase.class, "loadLibs", new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            ContentValues contentValues=(ContentValues)param.args[2];
-                            String tableName=(String) param.args[0];
-                            LogUtil.PrintInsert(tableName,contentValues,"sqlite");
+                            XposedHelpers.callStaticMethod(XposedHelpers.findClass("net.sqlcipher.database.SQLiteDatabase", dexClassLoader), "loadLibs", XposedHelpers.findClass("android.content.Context", dexClassLoader));
                         }
-                    });*/
-                }
-            });
-            XposedHelpers.findAndHookMethod("net.sqlcipher.database.SQLiteDatabase", dexClassLoader, "insertWithOnConflict", java.lang.String.class, java.lang.String.class, android.content.ContentValues.class, int.class, new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    ContentValues contentValues = (ContentValues) param.args[2];
-                    String tableName = (String) param.args[0];
-                    LogUtil.PrintInsert(tableName, contentValues, "sqlcipher insertWithOnConflict");
-                }
-            });
-            Class<?> sqlCipherClass = XposedHelpers.findClass("net.sqlcipher.database.SQLiteDatabase", dexClassLoader);
-            XposedBridge.hookAllConstructors(sqlCipherClass, new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    // 获取数据库路径和密码
-                    String path = (String) param.args[0];
-                    String password = (String) param.args[1];
-                    // 保存到全局变量中
-                    mDatabasePath = path;
-                    mDatabasePassword = password;
-                    XposedBridge.log("sqlCipherClass hookAllConstructors");
-                    XposedBridge.log("mDatabasePath:" + mDatabasePath + "mDatabasePassword:" + mDatabasePassword);
-                }
-            });
-            XposedHelpers.findAndHookMethod("net.sqlcipher.database.SQLiteDatabase", dexClassLoader, "isOpen", new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    isDatabaseOpened = (boolean) param.getResult();
-                    XposedBridge.log("isDatabaseOpened:" + isDatabaseOpened);
+                    });
+
+                    final Class<?> sqliteDatabase = XposedHelpers.findClass("net.sqlcipher.database.SQLiteDatabase", dexClassLoader);
+                    final Method insertWithOnConflictMethod = XposedHelpers.findMethodExact(sqliteDatabase, "insertWithOnConflict", String.class, String.class, XposedHelpers.findClass("android.content.ContentValues", dexClassLoader), int.class);
+
+                    XC_MethodHook methodHook = new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            String table = (String) param.args[0];
+                            ContentValues contentValues = (ContentValues) param.args[2];
+                            if (table != null && table.toLowerCase().startsWith("insert into")) {
+                                LogUtil.PrintInsert(table, contentValues, "sqlcipher insert");
+                            }
+                        }
+                    };
+                    // Hook insertWithOnConflict 方法
+                    XposedBridge.hookMethod(insertWithOnConflictMethod, methodHook);
+
+                    XC_MethodHook afterMethodHook = new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+
+                        }
+                    };
+                    // Hook其他执行SQL语句的方法
+                 /*   XposedHelpers.findAndHookMethod(sqliteDatabase, "update", String.class, XposedHelpers.findClass("android.content.ContentValues", dexClassLoader), String.class, String[].class, afterMethodHook);
+                    XposedHelpers.findAndHookMethod(sqliteDatabase, "delete", String.class, String.class, String[].class, afterMethodHook);*/
+
                 }
             });
         }
-
     }
 }
