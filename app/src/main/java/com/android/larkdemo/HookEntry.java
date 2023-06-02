@@ -9,7 +9,12 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.util.Log;
+import android.view.View;
+import android.widget.ImageView;
+
+import com.google.gson.Gson;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -41,38 +46,43 @@ public class HookEntry implements IXposedHookLoadPackage {
                         XposedBridge.log("cannot get classloader return ");
                         return;
                     }
-                    XposedHelpers.findAndHookMethod(SQLiteDatabase.class, "loadLibs", new XC_MethodHook() {
+                   /* XposedHelpers.findAndHookMethod("net.sqlcipher.database.SQLiteDatabase", dexClassLoader, "insertWithOnConflict", java.lang.String.class, java.lang.String.class, android.content.ContentValues.class, int.class, new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            XposedHelpers.callStaticMethod(XposedHelpers.findClass("net.sqlcipher.database.SQLiteDatabase", dexClassLoader), "loadLibs", XposedHelpers.findClass("android.content.Context", dexClassLoader));
+                            String table=(String)param.args[0];
+                            ContentValues contentValues=(ContentValues)param.args[2];
+                            LogUtil.PrintInsert(table,contentValues,"sqlcipher1");
                         }
                     });
-
-                    final Class<?> sqliteDatabase = XposedHelpers.findClass("net.sqlcipher.database.SQLiteDatabase", dexClassLoader);
-                    final Method insertWithOnConflictMethod = XposedHelpers.findMethodExact(sqliteDatabase, "insertWithOnConflict", String.class, String.class, XposedHelpers.findClass("android.content.ContentValues", dexClassLoader), int.class);
-
-                    XC_MethodHook methodHook = new XC_MethodHook() {
+                    XposedHelpers.findAndHookConstructor("RedPacketMessageCell$a$a", dexClassLoader, boolean.class, java.lang.String.class,new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            String table = (String) param.args[0];
-                            ContentValues contentValues = (ContentValues) param.args[2];
-                            if (table != null && table.toLowerCase().startsWith("insert into")) {
-                                LogUtil.PrintInsert(table, contentValues, "sqlcipher insert");
-                            }
+                            XposedBridge.log("RedPacketMessageCell$a$a,useable="+(boolean)param.args[0]+",status="+(String) param.args[1]);
                         }
-                    };
-                    // Hook insertWithOnConflict 方法
-                    XposedBridge.hookMethod(insertWithOnConflictMethod, methodHook);
-
-                    XC_MethodHook afterMethodHook = new XC_MethodHook() {
+                    });*/
+                    /*XposedHelpers.findAndHookMethod("com.ss.android.lark.integrator.im.chat.core.dependency.v", classLoader, "a", android.app.Activity.class, java.lang.String.class, java.lang.String.class, boolean.class, boolean.class, boolean.class, java.lang.String.class, new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            super.beforeHookedMethod(param);
+                        }
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-
+                            super.afterHookedMethod(param);
                         }
-                    };
-                    // Hook其他执行SQL语句的方法
-                 /*   XposedHelpers.findAndHookMethod(sqliteDatabase, "update", String.class, XposedHelpers.findClass("android.content.ContentValues", dexClassLoader), String.class, String[].class, afterMethodHook);
-                    XposedHelpers.findAndHookMethod(sqliteDatabase, "delete", String.class, String.class, String[].class, afterMethodHook);*/
+                    });*/
+                    XposedHelpers.findAndHookMethod("com.ss.android.lark.chatwindow.ChatWindowActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            XposedBridge.log("ChatWindowActivity has been hooked");
+                        }
+                    });
+                    XposedBridge.hookAllMethods(XposedHelpers.findClass("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader), "add", new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            super.beforeHookedMethod(param);
+                            LogUtil.PrintLog(new Gson().toJson(param.args), "addMsg");
+                        }
+                    });
 
                 }
             });
