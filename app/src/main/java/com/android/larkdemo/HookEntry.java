@@ -76,14 +76,35 @@ public class HookEntry implements IXposedHookLoadPackage {
                             XposedBridge.log("ChatWindowActivity has been hooked");
                         }
                     });
-                    XposedBridge.hookAllMethods(XposedHelpers.findClass("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader), "add", new XC_MethodHook() {
+                    /*XposedBridge.hookAllMethods(XposedHelpers.findClass("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader), "add", new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                             super.beforeHookedMethod(param);
                             LogUtil.PrintLog(new Gson().toJson(param.args), "addMsg");
                         }
-                    });
+                    });*/
+                    XposedHelpers.findAndHookMethod("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader, "add", Object.class, new XC_MethodHook() {
+                                @Override
+                                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                                    super.beforeHookedMethod(param);
+                                    LogUtil.PrintLog(new Gson().toJson(param.args), "addMsg");
+                                    Log.e("addMsg", new Gson().toJson(param.args));
+                                }
+                            }
+                    );
 
+                    //钉钉调用的这个插入，数据结构都出来了
+
+                    /*XposedHelpers.findAndHookMethod("com.alibaba.bee.DatabaseUtils", classLoader, "getInsertWithOnConflict", java.lang.Class<? extends com.alibaba.bee.impl.table.TableEntry>.class, java.lang.String.class, int.class, new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            super.beforeHookedMethod(param);
+                        }
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            super.afterHookedMethod(param);
+                        }
+                    });*/
                 }
             });
         }
