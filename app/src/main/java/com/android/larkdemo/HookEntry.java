@@ -70,19 +70,19 @@ public class HookEntry implements IXposedHookLoadPackage {
                             super.afterHookedMethod(param);
                         }
                     });*/
-                    XposedHelpers.findAndHookMethod("com.ss.android.lark.chatwindow.ChatWindowActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
+                    /*XposedHelpers.findAndHookMethod("com.ss.android.lark.chatwindow.ChatWindowActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                             XposedBridge.log("ChatWindowActivity has been hooked");
                         }
                     });
-                    /*XposedBridge.hookAllMethods(XposedHelpers.findClass("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader), "add", new XC_MethodHook() {
+                    *//*XposedBridge.hookAllMethods(XposedHelpers.findClass("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader), "add", new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                             super.beforeHookedMethod(param);
                             LogUtil.PrintLog(new Gson().toJson(param.args), "addMsg");
                         }
-                    });*/
+                    });*//*
                     XposedHelpers.findAndHookMethod("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader, "add", Object.class, new XC_MethodHook() {
                                 @Override
                                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -91,7 +91,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                                     Log.e("addMsg", new Gson().toJson(param.args));
                                 }
                             }
-                    );
+                    );*/
 
                     //钉钉调用的这个插入，数据结构都出来了
 
@@ -105,6 +105,19 @@ public class HookEntry implements IXposedHookLoadPackage {
                             super.afterHookedMethod(param);
                         }
                     });*/
+                    XposedHelpers.findAndHookMethod("android.widget.ImageView", dexClassLoader, "performClick", new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            Object mListenerInfo = XposedHelpers.getObjectField(param.thisObject, "mListenerInfo");
+                            if (mListenerInfo != null) {
+                                Object mOnClickListener = XposedHelpers.getObjectField(mListenerInfo, "mOnClickListener");
+                                if (mOnClickListener != null) {
+                                    String callbackClassName = mOnClickListener.getClass().getName();
+                                    LogUtil.PrintLog("Callback class name: " + callbackClassName, "ImageViewClickHook");
+                                }
+                            }
+                        }
+                    });
                 }
             });
         }
