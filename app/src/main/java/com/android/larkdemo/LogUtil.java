@@ -59,11 +59,11 @@ public class LogUtil {
         XposedBridge.log("-------------------------" + tag + "----------------------------------");
     }
 
-    public static void PrintStackTrace() {
+    public static void PrintStackTrace(int depth) {
         StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
         int count = 0;
         XposedBridge.log(TAG + "-------------------------stackTrace----------------------------------");
-        for (int i = 0; i < stackTraceElements.length && count < 5; i++) {
+        for (int i = 0; i < stackTraceElements.length && count < depth; i++) {
             String className = stackTraceElements[i].getClassName();
             if (!className.startsWith("de.robv.android.xposed") && !className.startsWith("com.android.larkdemo")) {
                 XposedBridge.log(TAG + stackTraceElements[i].toString());

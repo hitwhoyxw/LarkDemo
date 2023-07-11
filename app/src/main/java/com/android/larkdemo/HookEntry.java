@@ -25,6 +25,10 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
+import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
+import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
+import static de.robv.android.xposed.XposedHelpers.findClass;
+
 public class HookEntry implements IXposedHookLoadPackage {
     public static String TAG = "Demo";
     public static ClassLoader dexClassLoader = null;
@@ -32,13 +36,14 @@ public class HookEntry implements IXposedHookLoadPackage {
     private static String mDatabasePath = "";
     private static String mDatabasePassword = "";
     private static int isDatabaseOpened = -1;
+    private String strMessage;
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (loadPackageParam.packageName.equals(HookUtils.XPOSED_HOOK_PACKAGE)) {
             classLoader = loadPackageParam.classLoader;
             XposedBridge.log(TAG + " has Hooked!");
-            XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
+            findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     Context context = (Context) param.args[0];
                     dexClassLoader = context.getClassLoader();
@@ -46,66 +51,16 @@ public class HookEntry implements IXposedHookLoadPackage {
                         XposedBridge.log("cannot get classloader return ");
                         return;
                     }
-                   /* XposedHelpers.findAndHookMethod("net.sqlcipher.database.SQLiteDatabase", dexClassLoader, "insertWithOnConflict", java.lang.String.class, java.lang.String.class, android.content.ContentValues.class, int.class, new XC_MethodHook() {
+                    XposedBridge.hookAllMethods(XposedHelpers.findClass("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader), "add", new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            String table=(String)param.args[0];
-                            ContentValues contentValues=(ContentValues)param.args[2];
-                            LogUtil.PrintInsert(table,contentValues,"sqlcipher1");
+                            super.beforeHookedMethod(param);
+                            strMessage = new Gson().toJson(param.args);
+                            LogUtil.PrintLog(strMessage, "addMsg");
                         }
                     });
-                    XposedHelpers.findAndHookConstructor("RedPacketMessageCell$a$a", dexClassLoader, boolean.class, java.lang.String.class,new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            XposedBridge.log("RedPacketMessageCell$a$a,useable="+(boolean)param.args[0]+",status="+(String) param.args[1]);
-                        }
-                    });*/
-                    /*XposedHelpers.findAndHookMethod("com.ss.android.lark.integrator.im.chat.core.dependency.v", classLoader, "a", android.app.Activity.class, java.lang.String.class, java.lang.String.class, boolean.class, boolean.class, boolean.class, java.lang.String.class, new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            super.beforeHookedMethod(param);
-                        }
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                            super.afterHookedMethod(param);
-                        }
-                    });*/
-                    /*XposedHelpers.findAndHookMethod("com.ss.android.lark.chatwindow.ChatWindowActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            XposedBridge.log("ChatWindowActivity has been hooked");
-                        }
-                    });
-                    *//*XposedBridge.hookAllMethods(XposedHelpers.findClass("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader), "add", new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            super.beforeHookedMethod(param);
-                            LogUtil.PrintLog(new Gson().toJson(param.args), "addMsg");
-                        }
-                    });*//*
-                    XposedHelpers.findAndHookMethod("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader, "add", Object.class, new XC_MethodHook() {
-                                @Override
-                                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                                    super.beforeHookedMethod(param);
-                                    LogUtil.PrintLog(new Gson().toJson(param.args), "addMsg");
-                                    Log.e("addMsg", new Gson().toJson(param.args));
-                                }
-                            }
-                    );*/
 
-                    //钉钉调用的这个插入，数据结构都出来了
-
-                    /*XposedHelpers.findAndHookMethod("com.alibaba.bee.DatabaseUtils", classLoader, "getInsertWithOnConflict", java.lang.Class<? extends com.alibaba.bee.impl.table.TableEntry>.class, java.lang.String.class, int.class, new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            super.beforeHookedMethod(param);
-                        }
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                            super.afterHookedMethod(param);
-                        }
-                    });*/
-                    XposedHelpers.findAndHookMethod("android.widget.ImageView", dexClassLoader, "performClick", new XC_MethodHook() {
+                    findAndHookMethod("android.view.View", dexClassLoader, "performClick", new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                             Object mListenerInfo = XposedHelpers.getObjectField(param.thisObject, "mListenerInfo");
@@ -118,7 +73,17 @@ public class HookEntry implements IXposedHookLoadPackage {
                             }
                         }
                     });
+                    //通过反射注册的实现，第二个参数是对应的实现类名，通过堆栈区分是不是要找的。
+                    findAndHookConstructor("com.ss.android.lark.mira.e$a$d", dexClassLoader, java.lang.Class.class, java.lang.String.class, new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            String className = (String) param.args[1];
+                            LogUtil.PrintLog(className, "aim class");
+                            LogUtil.PrintStackTrace(10);
+                        }
+                    });
                 }
+
             });
         }
     }

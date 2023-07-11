@@ -14,6 +14,7 @@ public class HookUtils {
     public static String SQLCIPHER_CURSOR = "net.sqlcipher.Cursor";
     public static String SQLCIPHER_OPENHELPER = "net.sqlcipher.database.SQLiteOpenHelper";
     public static String XPOSED_HOOK_PACKAGE = "com.ss.android.lark";
+    public static String XPOSED_HOOK_PACKAGE1 = "com.alibaba.android.rimet";
 
 
     private static SharedPreferences sharedPreferences = null;
