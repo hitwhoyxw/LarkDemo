@@ -1,8 +1,7 @@
 package com.android.larkdemo;
-/*import net.sqlcipher.database.SQLiteDatabase;
-import net.sqlcipher.Cursor;
-import net.sqlcipher.CursorWrapper;*/
 
+
+import android.app.Activity;
 import android.app.Application;
 import android.content.ContentValues;
 import android.content.Context;
@@ -10,6 +9,7 @@ import android.database.Cursor;
 import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
@@ -69,17 +69,52 @@ public class HookEntry implements IXposedHookLoadPackage {
                                 if (mOnClickListener != null) {
                                     String callbackClassName = mOnClickListener.getClass().getName();
                                     LogUtil.PrintLog("Callback class name: " + callbackClassName, "ImageViewClickHook");
+                                    Log.i(TAG, "beforeHookedMethod: " + callbackClassName);
                                 }
                             }
                         }
                     });
-                    //通过反射注册的实现，第二个参数是对应的实现类名，通过堆栈区分是不是要找的。
-                    findAndHookConstructor("com.ss.android.lark.mira.e$a$d", dexClassLoader, java.lang.Class.class, java.lang.String.class, new XC_MethodHook() {
+                 /*   findAndHookConstructor("com.ss.android.lark.money.redpacket.detail.RedpacketDetailView", dexClassLoader, new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            String className = (String) param.args[1];
-                            LogUtil.PrintLog(className, "aim class");
-                            LogUtil.PrintStackTrace(10);
+                            LogUtil.PrintStackTrace(5);
+                        }
+                    });*/
+                    try {
+                        findAndHookConstructor("android.view.View", dexClassLoader, new XC_MethodHook() {
+                            @Override
+                            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                                View view = (View) param.thisObject;
+                                String className = view.getClass().getName();
+                                if (!className.contains("RedpacketDetailView")) {
+                                    return;
+                                }
+                                LogUtil.PrintLog("find RedpacketDetailView", "*********************************************");
+                                strMessage = new Gson().toJson(param.args);
+                                LogUtil.PrintLog(strMessage, "view的参数");
+                                LogUtil.PrintStackTrace(5);
+                            }
+                        });
+                    } catch (XposedHelpers.ClassNotFoundError error) {
+                        LogUtil.PrintLog(error.toString(), "RedpacketDetailView");
+                    } finally {
+
+                    }
+                    findAndHookMethod(Activity.class, "onCreate", Bundle.class, new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            Activity activity = (Activity) param.thisObject;
+                            String activityName = activity.getClass().getName();
+                            LogUtil.PrintLog("onCreate hook success" + activityName, "Activity");
+                            if (activityName.contains("RedpacketDetailActivity")) {
+                                Bundle extras = (Bundle) param.args[0];
+                                if (extras != null) {
+                                    for (String key : extras.keySet()) {
+                                        Object value = extras.get(key);
+                                        LogUtil.PrintLog(value.toString(), "Bundle");
+                                    }
+                                }
+                            }
                         }
                     });
                 }
