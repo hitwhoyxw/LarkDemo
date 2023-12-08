@@ -61,6 +61,9 @@ public class LogUtil {
 
     public static void PrintStackTrace(int depth) {
         StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+        if (depth == 0) {
+            depth = stackTraceElements.length;
+        }
         int count = 0;
         XposedBridge.log(TAG + "-------------------------stackTrace----------------------------------");
         for (int i = 0; i < stackTraceElements.length && count < depth; i++) {

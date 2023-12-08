@@ -76,14 +76,14 @@ public class HookEntry implements IXposedHookLoadPackage {
 //                            }
 //                        }
 //                    });
-                    findAndHookMethod(DexFile.class, "loadDex", String.class, String.class, int.class, new XC_MethodHook() {
+                    /*findAndHookMethod(DexFile.class, "loadDex", String.class, String.class, int.class, new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                             String dex = (String) param.args[0];
                             String odex = (String) param.args[1];
                             LogUtil.PrintLog("dex " + dex + "odex " + odex, "hook dexload");
                         }
-                    });
+                    });*/
 
                     try {
                         Class clzRedPacketMsgCell = XposedHelpers.findClass("com.ss.android.lark.chat.chatwindow.chat.message.cell.redpacket.RedPacketMessageCell", dexClassLoader);
@@ -119,7 +119,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                                                     // 调用 OnClickListener 的 onClick 方法
                                                     Method onClickMethod = View.OnClickListener.class.getDeclaredMethod("onClick", View.class);
                                                     onClickMethod.setAccessible(true);
-                                                    onClickMethod.invoke(onClickListener, view);
+                                                    //onClickMethod.invoke(onClickListener, view);
                                                     LogUtil.PrintLog("call onclick success", "RedPacketMessageCell");
                                                 }
                                             }
@@ -129,9 +129,24 @@ public class HookEntry implements IXposedHookLoadPackage {
 
                             }
                         }
+                        try {
+                            Class Bclz = findClass("com.ss.android.lark.b.class", dexClassLoader);
+                            Class Sclz = findClass("com.ss.android.lark.dependency.s.class", dexClassLoader);
+                            XposedHelpers.findAndHookMethod("com.ss.android.lark.d", dexClassLoader, "a", Bclz, Sclz, new XC_MethodHook() {
+                                @Override
+                                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                                    LogUtil.PrintStackTrace(0);
+                                }
+                            });
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     } catch (Exception e) {
                         LogUtil.PrintLog(e.toString(), "RedPacketMessageCell");
                     }
+
+
                 }
 
             });
