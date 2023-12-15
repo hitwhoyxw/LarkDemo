@@ -2,6 +2,8 @@ package com.android.larkdemo.Hook;
 
 
 import android.app.Application;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.content.Context;
 
 import com.android.larkdemo.Utils.Config;
@@ -48,6 +50,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                     }
                     HookSDKSender(dexClassLoader, false);
                     HookMsg(dexClassLoader);
+                    HookNotification(dexClassLoader);
                 }
 
 
@@ -115,6 +118,24 @@ public class HookEntry implements IXposedHookLoadPackage {
                     String str = new Gson().toJson(result);
                     LogUtil.PrintLog("Message$a build result = " + str, "Message$a");
                     LogUtil.PrintStackTrace(0);
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void HookNotification(ClassLoader dexClassLoader) {
+        try {
+            XposedBridge.hookAllMethods(findClass("android.app.NotificationManager", dexClassLoader), "notify", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    Notification notification = (Notification) param.args[param.args.length - 1];
+                    String str = new Gson().toJson(notification);
+                    LogUtil.PrintLog(" notification " + str, "NotificationManager");
+                    if (str.contains("红包")) {
+                        LogUtil.PrintStackTrace(0);
+                    }
                 }
             });
         } catch (Exception e) {
