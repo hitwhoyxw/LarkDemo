@@ -13,14 +13,8 @@ import java.util.Set;
 import de.robv.android.xposed.XposedHelpers;
 
 public class HookUtils {
-    public static ClassLoader classLoader = null;
-    public static String SQLITE_DATABASE = "android.database.sqlite.SQLiteDatabase";
-    public static String SQLCIPER_DATABASE = "net.sqlcipher.database.SQLiteDatabase";
-    public static String SQLCIPHER_CURSOR = "net.sqlcipher.Cursor";
-    public static String SQLCIPHER_OPENHELPER = "net.sqlcipher.database.SQLiteOpenHelper";
     public static String XPOSED_HOOK_PACKAGE = "com.ss.android.lark";
     public static String XPOSED_HOOK_PACKAGE1 = "com.alibaba.android.rimet";
-
 
     private static SharedPreferences sharedPreferences = null;
 
