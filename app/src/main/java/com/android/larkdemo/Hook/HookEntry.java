@@ -10,6 +10,7 @@ import com.android.larkdemo.Utils.Config;
 import com.android.larkdemo.Utils.HookUtils;
 import com.android.larkdemo.Utils.LogUtil;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -22,6 +23,8 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
+import static com.android.larkdemo.Utils.HookUtils.filterStackTrace;
+import static com.android.larkdemo.Utils.HookUtils.getJsonValue;
 import static de.robv.android.xposed.XposedHelpers.callStaticMethod;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
@@ -48,9 +51,10 @@ public class HookEntry implements IXposedHookLoadPackage {
                         XposedBridge.log("cannot get classloader return ");
                         return;
                     }
+                    HookStackTrace(dexClassLoader);
                     HookSDKSender(dexClassLoader, false);
                     HookMsg(dexClassLoader);
-                    HookNotification(dexClassLoader);
+                    //HookNotification(dexClassLoader);
                 }
 
 
@@ -111,15 +115,24 @@ public class HookEntry implements IXposedHookLoadPackage {
 
     public void HookMsg(ClassLoader dexClassLoader) {
         try {
-            XposedHelpers.findAndHookMethod("com.bytedance.lark.pb.basic.v1.Message$a", dexClassLoader, "build", new XC_MethodHook() {
+            XposedBridge.hookAllMethods(XposedHelpers.findClass("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader), "add", new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    Object result = param.getResult();
-                    String str = new Gson().toJson(result);
-                    LogUtil.PrintLog("Message$a build result = " + str, "Message$a");
-                    LogUtil.PrintStackTrace(0);
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    Gson gson = new Gson();
+                    String strMsg = gson.toJson(param.args[param.args.length - 1]);
+                    //LogUtil.PrintLog("addMsg = " + strMsg, "addMsg");
+
+                    JsonObject jsonObject = gson.fromJson(strMsg, JsonObject.class);
+                    String type = jsonObject.getAsJsonObject("mMessage").get("type").getAsString();
+                    if (type != null && type.equals("RED_PACKET")) {
+                        String redPacketId = jsonObject.getAsJsonObject("mMessage").getAsJsonObject("messageContent").get("redPacketId").getAsString();
+                        String subject = jsonObject.getAsJsonObject("mMessage").getAsJsonObject("messageContent").get("subject").getAsString();
+                        CallRequestBuilder(dexClassLoader, redPacketId, Config.finance_sdk_version, Config.is_return_name_auth, 1);
+                    }
                 }
             });
+
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -127,17 +140,7 @@ public class HookEntry implements IXposedHookLoadPackage {
 
     public void HookNotification(ClassLoader dexClassLoader) {
         try {
-            XposedBridge.hookAllMethods(findClass("android.app.NotificationManager", dexClassLoader), "notify", new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    Notification notification = (Notification) param.args[param.args.length - 1];
-                    String str = new Gson().toJson(notification);
-                    LogUtil.PrintLog(" notification " + str, "NotificationManager");
-                    if (str.contains("红包")) {
-                        LogUtil.PrintStackTrace(0);
-                    }
-                }
-            });
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -147,7 +150,7 @@ public class HookEntry implements IXposedHookLoadPackage {
         try {
             XposedHelpers.findAndHookMethod("com.bytedance.mira.plugin.b", dexClassLoader, "a", java.io.File.class, java.lang.String.class, int.class, java.lang.String.class, new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                protected void beforeHookedMethod(MethodHookParam param) {
                     File file = (File) param.args[0];
                     if (!file.getAbsolutePath().contains("money")) {
                         return;
@@ -165,7 +168,7 @@ public class HookEntry implements IXposedHookLoadPackage {
         }
     }
 
-    public void CallRequestBuilder(ClassLoader dexClassLoader, String id, String finance_sdk_version, boolean is_return_name_auth, Object hongbao_type) {
+    public void CallRequestBuilder(ClassLoader dexClassLoader, String id, String finance_sdk_version, boolean is_return_name_auth, int hongbao_type) {
         try {
             Class<?> builderClass = findClass("com.bytedance.lark.pb.im.v1.GrabHongbaoRequest$Builder", dexClassLoader);
             Class<?> redPacketTypeClass = findClass("com.bytedance.lark.pb.im.v1.HongbaoType", dexClassLoader);
@@ -173,9 +176,9 @@ public class HookEntry implements IXposedHookLoadPackage {
             Object builderInstance = builderClass.newInstance();
 
             // 设置Builder对象的字段值
-            builderClass.getMethod("id", String.class).invoke(builderInstance, "your_id_value");
-            builderClass.getMethod("is_return_name_auth", Boolean.class).invoke(builderInstance, true);
-            builderClass.getMethod("hongbao_type", hongbao_type.getClass()).invoke(builderInstance, callStaticMethod(redPacketTypeClass, "fromValue", 1));
+            builderClass.getMethod("id", String.class).invoke(builderInstance, id);
+            builderClass.getMethod("is_return_name_auth", Boolean.class).invoke(builderInstance, is_return_name_auth);
+            builderClass.getMethod("hongbao_type", findClass("com.bytedance.lark.pb.im.v1.HongbaoType", dexClassLoader)).invoke(builderInstance, callStaticMethod(redPacketTypeClass, "fromValue", hongbao_type));
             //builderClass.getMethod("chat_id",long.class).invoke(builderInstance, 0L);
 
             // 构建DeviceInfo对象
@@ -183,13 +186,13 @@ public class HookEntry implements IXposedHookLoadPackage {
             Class<?> deviceInfoBuilderClass = findClass("com.bytedance.lark.pb.im.v1.GrabHongbaoRequest$DeviceInfo$Builder", dexClassLoader);
 
             Object deviceInfoBuilderInstance = deviceInfoBuilderClass.newInstance();
-            deviceInfoBuilderClass.getMethod("finance_sdk_version", String.class).invoke(deviceInfoBuilderInstance, "your_finance_sdk_version");
+            deviceInfoBuilderClass.getMethod("finance_sdk_version", String.class).invoke(deviceInfoBuilderInstance, finance_sdk_version);
             Object deviceInfoInstance = deviceInfoBuilderClass.getMethod("build").invoke(deviceInfoBuilderInstance);
 
 
             builderClass.getMethod("device_info", deviceInfoClass).invoke(builderInstance, deviceInfoInstance);
 
-            Object grabHongbaoRequestInstance = builderClass.getMethod("build").invoke(builderInstance);
+            //Object grabHongbaoRequestInstance = builderClass.getMethod("build").invoke(builderInstance);
 
             Class commandCls = findClass("com.bytedance.lark.pb.basic.v1.Command", dexClassLoader);
             Object objCmd = callStaticMethod(commandCls, "fromValue", 2401);
@@ -207,7 +210,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                 LogUtil.PrintLog("asynSendRequestNonWrapMethod is null", "sdkSenderHook");
                 return;
             }
-            asynSendRequestNonWrapMethod.invoke(null, objCmd, grabHongbaoRequestInstance, null, null);
+            asynSendRequestNonWrapMethod.invoke(null, objCmd, builderInstance, null, null);
         } catch (Exception e) {
             LogUtil.PrintLog(e.toString(), "RequestBuilderHook");
         }
@@ -249,63 +252,6 @@ public class HookEntry implements IXposedHookLoadPackage {
 //                });
     }
 
-    public void HookRedpacketView(ClassLoader dexClassLoader) {
-//        try {
-//            Class clzRedPacketMsgCell = XposedHelpers.findClass("com.ss.android.lark.chat.chatwindow.chat.message.cell.redpacket.RedPacketMessageCell", dexClassLoader);
-//            if (clzRedPacketMsgCell != null) {
-//                LogUtil.PrintLog("find RedPacketMessageCell!!!", "RedPacketMessageCell");
-//                Method targetMethod = null;
-//                for (Method m : clzRedPacketMsgCell.getDeclaredMethods()) {
-//                    Boolean choise = m.getName().equals("a") && m.getParameterCount() == 3 && m.getParameterTypes()[0] == View.class && m.getParameterTypes()[1] == int.class && Modifier.isPublic(m.getModifiers());
-//                    if (choise) {
-//                        LogUtil.PrintLog("find RedPacketMessageCell.a(View view, int i, com.ss.android.lark.chat.export.vo.c<com.ss.android.lark.chat.chatwindow.chat.view.message.plugin.redpackage.entity.a> cVar)!!!", "RedPacketMessageCell");
-//                        //通过限定找到了对应的a方法
-//                        XposedBridge.hookMethod(m, new XC_MethodHook() {
-//                            @Override
-//                            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-//                                View view = (View) param.args[0];
-//                                int i = (int) param.args[1];
-//                                LogUtil.PrintLog("args1 int = " + i, "RedPacketMessageCell");
-//
-//                                // 获取 ListenerInfo 对象
-//                                Field listenerInfoField = View.class.getDeclaredField("mListenerInfo");
-//                                listenerInfoField.setAccessible(true);
-//                                Object listenerInfo = listenerInfoField.get(view);
-//
-//                                // 判断 ListenerInfo 对象是否为 null
-//                                if (listenerInfo != null) {
-//                                    // 获取 OnClickListener 对象
-//                                    Class<?> listenerInfoClass = Class.forName("android.view.View$ListenerInfo");
-//                                    Field onClickListenerField = listenerInfoClass.getDeclaredField("mOnClickListener");
-//                                    onClickListenerField.setAccessible(true);
-//                                    Object onClickListener = onClickListenerField.get(listenerInfo);
-//
-//                                    if (onClickListener instanceof View.OnClickListener) {
-//                                        // 调用 OnClickListener 的 onClick 方法
-//                                        Method onClickMethod = View.OnClickListener.class.getDeclaredMethod("onClick", View.class);
-//                                        onClickMethod.setAccessible(true);
-//                                        if (isFirst) {
-//                                            onClickMethod.invoke(onClickListener, view);
-//                                            LogUtil.PrintLog("call onclick success", "RedPacketMessageCell");
-//                                            isFirst = false;
-//                                        }
-//
-//                                    }
-//                                }
-//                            }
-//                        });
-//                    }
-//
-//                }
-//            }
-//        }
-//    catch(Exception e)
-//    {
-//        LogUtil.PrintLog(e.toString(), "RedPacketMessageCell");
-//
-//    }
-    }
-
     public void Hook(ClassLoader dexClassLoader) {
 
         try {
@@ -322,4 +268,31 @@ public class HookEntry implements IXposedHookLoadPackage {
             e.printStackTrace();
         }
     }
+
+    public void HookStackTrace(ClassLoader dexClassLoader) {
+        try {
+            XposedHelpers.findAndHookMethod(Throwable.class, "getStackTrace", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    // 获取原始的StackTraceElement[]
+                    StackTraceElement[] stackTrace = (StackTraceElement[]) param.getResult();
+                    StackTraceElement[] filteredStackTrace = filterStackTrace(stackTrace);
+                    param.setResult(filteredStackTrace);
+                }
+            });
+            XposedHelpers.findAndHookMethod(Thread.class, "getStackTrace", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    // 获取原始的StackTraceElement[]
+                    StackTraceElement[] stackTrace = (StackTraceElement[]) param.getResult();
+                    StackTraceElement[] filteredStackTrace = filterStackTrace(stackTrace);
+                    param.setResult(filteredStackTrace);
+                }
+            });
+        } catch (Exception e) {
+            LogUtil.PrintLog("error occued in HookStackTrace", "HookStackTrace");
+        }
+
+    }
+
 }
