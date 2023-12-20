@@ -1,9 +1,102 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".Activity.MainActivity">
+    android:background="#f5f5f5">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="vertical">
+
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginBottom="10dp"
+            android:layout_marginLeft="20dp"
+            android:layout_marginRight="20dp"
+            android:layout_marginTop="10dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <Switch
+                    android:id="@+id/switch_module"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="模块开关" />
+
+                <Switch
+                    android:id="@+id/switch_delay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="延迟开关" />
+
+                <TextView
+                    android:id="@+id/textview_delay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="延迟时间（s为单位）" />
+
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+
+                    <EditText
+                        android:id="@+id/editText_starttime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ems="10"
+                        android:inputType="text"
+                        android:text="0" />
+
+                    <EditText
+                        android:id="@+id/editText_endtime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ems="10"
+                        android:inputType="text"
+                        android:text="0" />
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switch_keyword"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="启用关键词屏蔽（多个关键词|分隔）" />
+
+                <EditText
+                    android:id="@+id/editText_keyword"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ems="10"
+                    android:hint="例如挂|g"
+                    android:inputType="text" />
+
+            </LinearLayout>
+        </ScrollView>
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_setting_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:layout_marginTop="10dp"
+        android:lineSpacingExtra="3dp"
+        android:text="模块设置"
+        android:textColor="#8f8f8f"
+        android:textSize="12sp" />
+
+</FrameLayout>

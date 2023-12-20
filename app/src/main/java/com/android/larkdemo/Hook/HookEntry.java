@@ -16,6 +16,9 @@ import com.google.gson.JsonParser;
 
 import java.io.File;
 import java.lang.reflect.Method;
+import java.util.Random;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -124,10 +127,29 @@ public class HookEntry implements IXposedHookLoadPackage {
 
                     JsonObject jsonObject = gson.fromJson(strMsg, JsonObject.class);
                     String type = jsonObject.getAsJsonObject("mMessage").get("type").getAsString();
-                    if (type != null && type.equals("RED_PACKET")) {
+                    boolean isMoudleEnable = Boolean.parseBoolean(HookUtils.readConfig("isMoudleEnable"));
+                    if (type != null && type.equals("RED_PACKET") && isMoudleEnable) {
                         String redPacketId = jsonObject.getAsJsonObject("mMessage").getAsJsonObject("messageContent").get("redPacketId").getAsString();
                         String subject = jsonObject.getAsJsonObject("mMessage").getAsJsonObject("messageContent").get("subject").getAsString();
-                        CallRequestBuilder(dexClassLoader, redPacketId, Config.finance_sdk_version, Config.is_return_name_auth, 1);
+
+                        if (HookUtils.containMuteWord(subject, (String) HookUtils.readConfig("muteKeyword"))) {
+                            return;
+                        }
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    int delayTimeMin = (int) Float.parseFloat(HookUtils.readConfig("delayTimeMin")) * 1000;
+                                    int daleyTimeMax = (int) Float.parseFloat(HookUtils.readConfig("daleyTimeMax")) * 1000;
+                                    int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
+                                    Thread.sleep(mSec);
+                                    CallRequestBuilder(dexClassLoader, redPacketId, Config.finance_sdk_version, Config.is_return_name_auth, 1);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }).start();
+                        //CallRequestBuilder(dexClassLoader, redPacketId, Config.finance_sdk_version, Config.is_return_name_auth, 1);
                     }
                 }
             });
@@ -160,7 +182,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                     String str2 = (String) param.args[3];
                     LogUtil.PrintLog("plugin file path " + file.getAbsolutePath() + " plugin name " + str + " plugin version" + i + " class name" + str2, "com.bytedance.mira.plugin.b.a");
                     Context context = (Context) XposedHelpers.callMethod(file, "getApplicationContext");
-                    HookUtils.CopyFile(file, context, "myplugin");
+                    //HookUtils.CopyFile(file, context, "myplugin");
                 }
             });
         } catch (Exception e) {
