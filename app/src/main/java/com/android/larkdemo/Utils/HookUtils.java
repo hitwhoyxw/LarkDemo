@@ -1,5 +1,6 @@
 package com.android.larkdemo.Utils;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 
@@ -18,40 +19,25 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Set;
 
+import de.robv.android.xposed.XSharedPreferences;
+
 public class HookUtils {
     public static String XPOSED_HOOK_PACKAGE = "com.ss.android.lark";
     public static String XPOSED_HOOK_PACKAGE1 = "com.alibaba.android.rimet";
 
-    public static String ConfigPath = "/sdcard/MyModule/config.properties";
 
     public static String readConfig(String key) {
-        File configFile = new File(ConfigPath);
-        Properties properties = new Properties();
-        try {
-            FileInputStream fileInput = new FileInputStream(configFile);
-            properties.load(fileInput);
-            fileInput.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return properties.getProperty(key);
+//        try {
+//            XSharedPreferences xSharedPreferences = new XSharedPreferences(XPOSED_HOOK_PACKAGE, ConfigName);
+//            xSharedPreferences.makeWorldReadable();
+//        }catch (Exception e){
+//            LogUtil.PrintLog("readConfig error:"+e.getMessage(),"readConfig");
+//        }
+        return "";
     }
 
     public static void writeConfig(String key, String value) {
-        File configFile = new File(ConfigPath);
-        Properties properties = new Properties();
-        try {
-            FileInputStream fileInput = new FileInputStream(configFile);
-            properties.load(fileInput);
-            fileInput.close();
 
-            FileOutputStream fileOutput = new FileOutputStream(configFile);
-            properties.setProperty(key, value.toString());
-            properties.store(fileOutput, null);
-            fileOutput.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     public static boolean containMuteWord(String str, String muteWords) {

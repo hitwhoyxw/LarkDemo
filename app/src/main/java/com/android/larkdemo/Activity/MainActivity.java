@@ -3,6 +3,8 @@ package com.android.larkdemo.Activity;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,6 +16,7 @@ import android.widget.TextView;
 
 import com.android.larkdemo.R;
 import com.android.larkdemo.Utils.HookUtils;
+import com.android.larkdemo.Utils.LogUtil;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -30,21 +33,33 @@ public class MainActivity extends AppCompatActivity {
     EditText delayTimeMinEditText;
     EditText delayTimeMaxEditText;
     EditText muteKeywordEditText;
+    static SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        initConfigSetting();
         findAllView();
         readAllConfig();
         setListeners();
     }
+
 
     @Override
     protected void onDestroy() {
         saveAllConfig();
         super.onDestroy();
 
+    }
+
+    private void initConfigSetting() {
+        try {
+            sharedPreferences = getSharedPreferences("Moduleconfig", Context.MODE_WORLD_READABLE);
+        } catch (SecurityException e) {
+            LogUtil.PrintLog("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
+            sharedPreferences = null;
+        }
     }
 
     public void findAllView() {
@@ -61,21 +76,21 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 isMoudleEnable = isChecked;
-                HookUtils.writeConfig("isMoudleEnable", String.valueOf(isMoudleEnable));
+                saveAllConfig();
             }
         });
         delaySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 isDelayEnable = isChecked;
-                HookUtils.writeConfig("isDelayEnable", String.valueOf(isDelayEnable));
+                saveAllConfig();
             }
         });
         muteSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 isMuteEnable = isChecked;
-                HookUtils.writeConfig("isMuteEnable", String.valueOf(isMuteEnable));
+                saveAllConfig();
             }
         });
         delayTimeMinEditText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
@@ -85,8 +100,8 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 try {
-                    delayTimeMin = Integer.parseInt(delayTimeMinEditText.getText().toString());
-                    HookUtils.writeConfig("delayTimeMin", String.valueOf(delayTimeMin));
+                    delayTimeMin = Float.parseFloat(delayTimeMinEditText.getText().toString());
+                    saveAllConfig();
                 } catch (ClassCastException e) {
                     e.printStackTrace();
                 }
@@ -99,8 +114,8 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 try {
-                    daleyTimeMax = Integer.parseInt(delayTimeMaxEditText.getText().toString());
-                    HookUtils.writeConfig("daleyTimeMax", String.valueOf(daleyTimeMax));
+                    daleyTimeMax = Float.parseFloat(delayTimeMaxEditText.getText().toString());
+                    saveAllConfig();
                 } catch (ClassCastException e) {
                     e.printStackTrace();
                 }
@@ -114,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 try {
                     muteKeyword = muteKeywordEditText.getText().toString();
-                    HookUtils.writeConfig("muteKeyword", muteKeyword);
+                    saveAllConfig();
                 } catch (ClassCastException e) {
                     e.printStackTrace();
                 }
@@ -123,58 +138,41 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void readAllConfig() {
-        String moduleConfig = HookUtils.readConfig("isMoudleEnable");
-        String delayConfig = HookUtils.readConfig("isDelayEnable");
-        String muteConfig = HookUtils.readConfig("isMuteEnable");
-        String delayTimeMinConfig = HookUtils.readConfig("delayTimeMin");
-        String daleyTimeMaxConfig = HookUtils.readConfig("daleyTimeMax");
-        String muteKeywordConfig = HookUtils.readConfig("muteKeyword");
+        try {
+            boolean moduleConfig = sharedPreferences.getBoolean("isMoudleEnable", false);
+            boolean delayConfig = sharedPreferences.getBoolean("isDelayEnable", false);
+            boolean muteConfig = sharedPreferences.getBoolean("isMuteEnable", false);
+            float delayTimeMinConfig = sharedPreferences.getFloat("delayTimeMin", 0);
+            float daleyTimeMaxConfig = sharedPreferences.getFloat("daleyTimeMax", 0);
+            String muteKeywordConfig = sharedPreferences.getString("muteKeyword", "");
 
-        if (moduleConfig != null) {
-            isMoudleEnable = Boolean.parseBoolean(moduleConfig);
-        } else {
-            isMoudleEnable = false;
+
+            moudleSwitch.setChecked(isMoudleEnable);
+            delaySwitch.setChecked(isDelayEnable);
+            muteSwitch.setChecked(isMuteEnable);
+            delayTimeMinEditText.setText(String.valueOf(delayTimeMin));
+            delayTimeMaxEditText.setText(String.valueOf(daleyTimeMax));
+            muteKeywordEditText.setText(muteKeyword);
+        } catch (NullPointerException e) {
+            LogUtil.PrintLog("readAllConfig error:" + e.getMessage(), "readAllConfig");
         }
-        if (delayConfig != null) {
-            isDelayEnable = Boolean.parseBoolean(delayConfig);
-        } else {
-            isDelayEnable = false;
-        }
-        if (muteConfig != null) {
-            isMuteEnable = Boolean.parseBoolean(muteConfig);
-        } else {
-            isMuteEnable = false;
-        }
-        if (delayTimeMinConfig != null) {
-            delayTimeMin = Float.parseFloat(delayTimeMinConfig);
-        } else {
-            delayTimeMin = 0;
-        }
-        if (daleyTimeMaxConfig != null) {
-            daleyTimeMax = Float.parseFloat(daleyTimeMaxConfig);
-        } else {
-            daleyTimeMax = 0;
-        }
-        if (muteKeywordConfig != null) {
-            muteKeyword = muteKeywordConfig;
-        } else {
-            muteKeyword = "";
-        }
-        moudleSwitch.setChecked(isMoudleEnable);
-        delaySwitch.setChecked(isDelayEnable);
-        muteSwitch.setChecked(isMuteEnable);
-        delayTimeMinEditText.setText(String.valueOf(delayTimeMin));
-        delayTimeMaxEditText.setText(String.valueOf(daleyTimeMax));
-        muteKeywordEditText.setText(muteKeyword);
+
+
     }
 
     public void saveAllConfig() {
-        HookUtils.writeConfig("isMoudleEnable", String.valueOf(isMoudleEnable));
-        HookUtils.writeConfig("isDelayEnable", String.valueOf(isDelayEnable));
-        HookUtils.writeConfig("isMuteEnable", String.valueOf(isMuteEnable));
-        HookUtils.writeConfig("delayTimeMin", String.valueOf(delayTimeMin));
-        HookUtils.writeConfig("daleyTimeMax", String.valueOf(daleyTimeMax));
-        HookUtils.writeConfig("muteKeyword", muteKeyword);
+        try {
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putBoolean("isMoudleEnable", isMoudleEnable);
+            editor.putBoolean("isDelayEnable", isDelayEnable);
+            editor.putBoolean("isMuteEnable", isMuteEnable);
+            editor.putFloat("delayTimeMin", delayTimeMin);
+            editor.putFloat("daleyTimeMax", daleyTimeMax);
+            editor.putString("muteKeyword", muteKeyword);
+        } catch (NullPointerException e) {
+            LogUtil.PrintLog("saveAllConfig error:" + e.getMessage(), "saveAllConfig");
+        }
+
     }
 
 }

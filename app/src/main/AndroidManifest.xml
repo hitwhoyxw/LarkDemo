@@ -45,6 +45,9 @@
         <meta-data
             android:name="xposedscope"
             android:resource="@array/xposedscope" />
+        <meta-data
+            android:name="xposedsharedprefs"
+            android:value="true" />
     </application>
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
