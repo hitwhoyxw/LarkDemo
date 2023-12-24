@@ -41,7 +41,7 @@
             android:value="@string/app_name" /> <!-- 模块最低支持的Api版本 一般填54即可 -->
         <meta-data
             android:name="xposedminversion"
-            android:value="82" /> <!-- 模块作用域 -->
+            android:value="93" /> <!-- 模块作用域 -->
         <meta-data
             android:name="xposedscope"
             android:resource="@array/xposedscope" />

@@ -5,50 +5,49 @@ import android.app.Application;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.util.Log;
 
-import com.android.larkdemo.Utils.Config;
+import com.android.larkdemo.Utils.MyConfig;
 import com.android.larkdemo.Utils.HookUtils;
 import com.android.larkdemo.Utils.LogUtil;
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
+
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import java.io.File;
 import java.lang.reflect.Method;
 import java.util.Random;
-import java.util.logging.Handler;
-import java.util.logging.LogRecord;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XSharedPreferences;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 import static com.android.larkdemo.Utils.HookUtils.filterStackTrace;
-import static com.android.larkdemo.Utils.HookUtils.getJsonValue;
 import static de.robv.android.xposed.XposedHelpers.callStaticMethod;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
 
 public class HookEntry implements IXposedHookLoadPackage {
     public static String TAG = "Demo";
-    private static String mDatabasePath = "";
-    private static String mDatabasePassword = "";
-    private static int isDatabaseOpened = -1;
-    private String strMessage;
 
-    private Boolean isFirst = true;
-
+    public XSharedPreferences xSharedPreferences=null;
+    public SharedPreferences sharedPreferences=null;
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (loadPackageParam.packageName.equals(HookUtils.XPOSED_HOOK_PACKAGE)) {
+            xSharedPreferences=MyConfig.init();
+            //xSharedPreferences.reload();
             ClassLoader classLoader = loadPackageParam.classLoader;
             XposedBridge.log(TAG + " has Hooked!");
             findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     Context context = (Context) param.args[0];
+                    sharedPreferences=context.getSharedPreferences("myconfig",Context.MODE_PRIVATE);
                     ClassLoader dexClassLoader = context.getClassLoader();
                     if (dexClassLoader == null) {
                         XposedBridge.log("cannot get classloader return ");
@@ -93,8 +92,8 @@ public class HookEntry implements IXposedHookLoadPackage {
                                     if (jsonObject.has("device_info")) {
                                         JsonObject device_info = jsonObject.get("device_info").getAsJsonObject();
                                         String version = device_info.get("finance_sdk_version").getAsString();
-                                        if (!version.equals(Config.finance_sdk_version)) {
-                                            Config.finance_sdk_version = version;
+                                        if (!version.equals(MyConfig.finance_sdk_version)) {
+                                            MyConfig.finance_sdk_version = version;
                                             LogUtil.PrintLog("update version finance_sdk_version=" + version, "sdkSenderHook");
                                         }
                                     }
@@ -127,23 +126,25 @@ public class HookEntry implements IXposedHookLoadPackage {
 
                     JsonObject jsonObject = gson.fromJson(strMsg, JsonObject.class);
                     String type = jsonObject.getAsJsonObject("mMessage").get("type").getAsString();
-                    boolean isMoudleEnable = Boolean.parseBoolean(HookUtils.readConfig("isMoudleEnable"));
+                    boolean isMoudleEnable = xSharedPreferences.getBoolean("isMoudleEnable",false);
                     if (type != null && type.equals("RED_PACKET") && isMoudleEnable) {
                         String redPacketId = jsonObject.getAsJsonObject("mMessage").getAsJsonObject("messageContent").get("redPacketId").getAsString();
                         String subject = jsonObject.getAsJsonObject("mMessage").getAsJsonObject("messageContent").get("subject").getAsString();
 
-                        if (HookUtils.containMuteWord(subject, (String) HookUtils.readConfig("muteKeyword"))) {
+                        if (HookUtils.containMuteWord(subject, xSharedPreferences.getString("muteKeyword",""))) {
+                            LogUtil.PrintLog("mute redpacket subject = "+subject,"mute redpacket");
                             return;
                         }
                         new Thread(new Runnable() {
                             @Override
                             public void run() {
                                 try {
-                                    int delayTimeMin = (int) Float.parseFloat(HookUtils.readConfig("delayTimeMin")) * 1000;
-                                    int daleyTimeMax = (int) Float.parseFloat(HookUtils.readConfig("daleyTimeMax")) * 1000;
+                                    int delayTimeMin = (int) (xSharedPreferences.getFloat("delayTimeMin",0f)) * 1000;
+                                    int daleyTimeMax = (int) xSharedPreferences.getFloat("daleyTimeMax",0f) * 1000;
                                     int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
+                                    LogUtil.PrintLog("delay grab time = "+mSec,"delay grab");
                                     Thread.sleep(mSec);
-                                    CallRequestBuilder(dexClassLoader, redPacketId, Config.finance_sdk_version, Config.is_return_name_auth, 1);
+                                    CallRequestBuilder(dexClassLoader, redPacketId, MyConfig.finance_sdk_version, MyConfig.is_return_name_auth, 1);
                                 } catch (InterruptedException e) {
                                     e.printStackTrace();
                                 }

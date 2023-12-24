@@ -78,5 +78,41 @@ public class HookUtils {
         }
         return null;
     }
+    public static int compareVersions(String version1, String version2) {
+        String[] v1 = version1.split("\\.");
+        String[] v2 = version2.split("\\.");
+
+        int len1 = v1.length;
+        int len2 = v2.length;
+        int min = Math.min(len1, len2);
+
+        for (int i = 0; i < min; i++) {
+            int part1 = 0;
+            int part2 = 0;
+            try {
+                part1 = Integer.parseInt(v1[i]);
+            } catch (NumberFormatException e) {
+                part1 = 0;
+            }
+            try {
+                part2 = Integer.parseInt(v2[i]);
+            } catch (NumberFormatException e) {
+                part2 = 0;
+            }
+            if (part1 < part2) {
+                return -1;
+            } else if (part1 > part2) {
+                return 1;
+            }
+        }
+
+        if (len1 < len2) {
+            return -1;
+        } else if (len1 > len2) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
 
 }

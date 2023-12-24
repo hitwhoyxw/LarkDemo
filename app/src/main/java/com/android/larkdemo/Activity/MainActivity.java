@@ -6,6 +6,7 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,22 +27,21 @@ public class MainActivity extends AppCompatActivity {
     float delayTimeMin = 0;
     float daleyTimeMax = 0;
     String muteKeyword = "";
-
     Switch moudleSwitch;
     Switch delaySwitch;
     Switch muteSwitch;
     EditText delayTimeMinEditText;
     EditText delayTimeMaxEditText;
     EditText muteKeywordEditText;
-    static SharedPreferences sharedPreferences;
+    SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        readAllConfig();
         initConfigSetting();
         findAllView();
-        readAllConfig();
         setListeners();
     }
 
@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             sharedPreferences = getSharedPreferences("Moduleconfig", Context.MODE_WORLD_READABLE);
         } catch (SecurityException e) {
-            LogUtil.PrintLog("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
+            Log.i("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
             sharedPreferences = null;
         }
     }
@@ -139,12 +139,12 @@ public class MainActivity extends AppCompatActivity {
 
     public void readAllConfig() {
         try {
-            boolean moduleConfig = sharedPreferences.getBoolean("isMoudleEnable", false);
-            boolean delayConfig = sharedPreferences.getBoolean("isDelayEnable", false);
-            boolean muteConfig = sharedPreferences.getBoolean("isMuteEnable", false);
-            float delayTimeMinConfig = sharedPreferences.getFloat("delayTimeMin", 0);
-            float daleyTimeMaxConfig = sharedPreferences.getFloat("daleyTimeMax", 0);
-            String muteKeywordConfig = sharedPreferences.getString("muteKeyword", "");
+            isMoudleEnable = sharedPreferences.getBoolean("isMoudleEnable", false);
+            isDelayEnable = sharedPreferences.getBoolean("isDelayEnable", false);
+            isMuteEnable = sharedPreferences.getBoolean("isMuteEnable", false);
+            delayTimeMin = sharedPreferences.getFloat("delayTimeMin", 0);
+            daleyTimeMax = sharedPreferences.getFloat("daleyTimeMax", 0);
+            muteKeyword = sharedPreferences.getString("muteKeyword", "");
 
 
             moudleSwitch.setChecked(isMoudleEnable);
@@ -154,9 +154,8 @@ public class MainActivity extends AppCompatActivity {
             delayTimeMaxEditText.setText(String.valueOf(daleyTimeMax));
             muteKeywordEditText.setText(muteKeyword);
         } catch (NullPointerException e) {
-            LogUtil.PrintLog("readAllConfig error:" + e.getMessage(), "readAllConfig");
+            Log.i("readAllConfig error:" + e.getMessage(), "readAllConfig");
         }
-
 
     }
 
@@ -170,7 +169,7 @@ public class MainActivity extends AppCompatActivity {
             editor.putFloat("daleyTimeMax", daleyTimeMax);
             editor.putString("muteKeyword", muteKeyword);
         } catch (NullPointerException e) {
-            LogUtil.PrintLog("saveAllConfig error:" + e.getMessage(), "saveAllConfig");
+            Log.i("saveAllConfig error:" + e.getMessage(), "saveAllConfig");
         }
 
     }
