@@ -33,6 +33,10 @@
             </intent-filter>
         </activity>
 
+        <provider
+            android:name=".Utils.ContentProviderUtils"
+            android:authorities="com.android.larkdemo.Utils.ContentProviderUtils"
+            android:exported="true" />
         <meta-data
             android:name="xposedmodule"
             android:value="true" /> <!-- 模块的简介（在框架中显示） -->

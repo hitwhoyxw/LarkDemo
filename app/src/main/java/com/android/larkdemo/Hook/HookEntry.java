@@ -8,9 +8,11 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import com.android.larkdemo.Utils.ContentProviderUtils;
 import com.android.larkdemo.Utils.MyConfig;
 import com.android.larkdemo.Utils.HookUtils;
 import com.android.larkdemo.Utils.LogUtil;
+import com.crossbowffs.remotepreferences.RemotePreferences;
 import com.google.gson.Gson;
 
 import com.google.gson.JsonObject;
@@ -35,7 +37,7 @@ import static de.robv.android.xposed.XposedHelpers.findClass;
 public class HookEntry implements IXposedHookLoadPackage {
     public static String TAG = "Demo";
 
-    public XSharedPreferences xSharedPreferences=null;
+    public SharedPreferences xSharedPreferences = null;
     public SharedPreferences sharedPreferences = null;
     SharedPreferences.Editor editor = null;
     @Override
@@ -306,23 +308,10 @@ public class HookEntry implements IXposedHookLoadPackage {
 
     private void initConfigSetting(Context context) {
         try {
-            xSharedPreferences = MyConfig.init();
-            xSharedPreferences.registerOnSharedPreferenceChangeListener(new SharedPreferences.OnSharedPreferenceChangeListener() {
-                @Override
-                public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String s) {
-                    LogUtil.PrintLog("onSharedPreferenceChanged ", "onSharedPreferenceChanged");
-                    xSharedPreferences.reload();
-                }
-            });
-            sharedPreferences = context.getSharedPreferences("myconfig", Context.MODE_PRIVATE);
-            editor = sharedPreferences.edit();
-        } catch (SecurityException e) {
-            Log.i("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
-            xSharedPreferences = null;
-            sharedPreferences = null;
-        } catch (NullPointerException e) {
-            Log.i("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
-            editor = null;
+            sharedPreferences = context.getSharedPreferences(ContentProviderUtils.prefFileNames[ContentProviderUtils.MY_CONFIG], Context.MODE_PRIVATE);
+            xSharedPreferences = new RemotePreferences(context, ContentProviderUtils.authority, ContentProviderUtils.prefFileNames[ContentProviderUtils.MODULE_CONFIG]);
+        } catch (Exception e) {
+            LogUtil.PrintLog("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
         }
     }
 

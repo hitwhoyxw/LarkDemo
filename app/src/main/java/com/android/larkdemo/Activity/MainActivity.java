@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void initConfigSetting() {
         try {
-            sharedPreferences = getSharedPreferences("Moduleconfig", Context.MODE_WORLD_READABLE);
+            sharedPreferences = getSharedPreferences("module_config", Context.MODE_PRIVATE);
         } catch (SecurityException e) {
             Log.i("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
             sharedPreferences = null;
