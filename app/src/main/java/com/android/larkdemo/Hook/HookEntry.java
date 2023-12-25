@@ -36,18 +36,18 @@ public class HookEntry implements IXposedHookLoadPackage {
     public static String TAG = "Demo";
 
     public XSharedPreferences xSharedPreferences=null;
-    public SharedPreferences sharedPreferences=null;
+    public SharedPreferences sharedPreferences = null;
+    SharedPreferences.Editor editor = null;
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (loadPackageParam.packageName.equals(HookUtils.XPOSED_HOOK_PACKAGE)) {
-            xSharedPreferences=MyConfig.init();
             //xSharedPreferences.reload();
             ClassLoader classLoader = loadPackageParam.classLoader;
             XposedBridge.log(TAG + " has Hooked!");
             findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     Context context = (Context) param.args[0];
-                    sharedPreferences=context.getSharedPreferences("myconfig",Context.MODE_PRIVATE);
+                    initConfigSetting(context);
                     ClassLoader dexClassLoader = context.getClassLoader();
                     if (dexClassLoader == null) {
                         XposedBridge.log("cannot get classloader return ");
@@ -92,8 +92,11 @@ public class HookEntry implements IXposedHookLoadPackage {
                                     if (jsonObject.has("device_info")) {
                                         JsonObject device_info = jsonObject.get("device_info").getAsJsonObject();
                                         String version = device_info.get("finance_sdk_version").getAsString();
-                                        if (!version.equals(MyConfig.finance_sdk_version)) {
-                                            MyConfig.finance_sdk_version = version;
+
+                                        String configVersion = sharedPreferences.getString("finance_sdk_version", "0.0.0");
+                                        if (HookUtils.compareVersions(version, configVersion) >= 0) {
+                                            configVersion = version;
+                                            editor.putString("finance_sdk_version", configVersion);
                                             LogUtil.PrintLog("update version finance_sdk_version=" + version, "sdkSenderHook");
                                         }
                                     }
@@ -101,7 +104,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                                 LogUtil.PrintLog("command = " + strCmd, methodName);
                                 LogUtil.PrintLog("msgBuilder = " + strMsg, methodName);
                                 if (strCmd.contains("HONGBAO")) {
-                                    LogUtil.PrintStackTrace(0);
+                                    //LogUtil.PrintStackTrace(0);
                                 }
                             }
                         });
@@ -275,23 +278,6 @@ public class HookEntry implements IXposedHookLoadPackage {
 //                });
     }
 
-    public void Hook(ClassLoader dexClassLoader) {
-
-        try {
-            Class Bclz = findClass("com.ss.android.lark.b.class", dexClassLoader);
-            Class Sclz = findClass("com.ss.android.lark.dependency.s.class", dexClassLoader);
-            XposedHelpers.findAndHookMethod("com.ss.android.lark.d", dexClassLoader, "a", Bclz, Sclz, new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    LogUtil.PrintStackTrace(0);
-                }
-            });
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     public void HookStackTrace(ClassLoader dexClassLoader) {
         try {
             XposedHelpers.findAndHookMethod(Throwable.class, "getStackTrace", new XC_MethodHook() {
@@ -316,6 +302,28 @@ public class HookEntry implements IXposedHookLoadPackage {
             LogUtil.PrintLog("error occued in HookStackTrace", "HookStackTrace");
         }
 
+    }
+
+    private void initConfigSetting(Context context) {
+        try {
+            xSharedPreferences = MyConfig.init();
+            xSharedPreferences.registerOnSharedPreferenceChangeListener(new SharedPreferences.OnSharedPreferenceChangeListener() {
+                @Override
+                public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String s) {
+                    LogUtil.PrintLog("onSharedPreferenceChanged ", "onSharedPreferenceChanged");
+                    xSharedPreferences.reload();
+                }
+            });
+            sharedPreferences = context.getSharedPreferences("myconfig", Context.MODE_PRIVATE);
+            editor = sharedPreferences.edit();
+        } catch (SecurityException e) {
+            Log.i("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
+            xSharedPreferences = null;
+            sharedPreferences = null;
+        } catch (NullPointerException e) {
+            Log.i("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
+            editor = null;
+        }
     }
 
 }
