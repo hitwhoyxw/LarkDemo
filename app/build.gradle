@@ -35,4 +35,7 @@ dependencies {
 
     implementation 'com.crossbowffs.remotepreferences:remotepreferences:0.8'
     implementation 'com.google.code.gson:gson:2.8.5'
+
+//    compileOnly(libxposed.api)
+//    implementation(libxposed.service)
 }

@@ -1,6 +1,6 @@
 <resources>
-    <string-array name="xposedscope" >
-        <!-- 这里填写模块的作用域应用的包名，可以填多个。 -->
-        <item>me.kyuubiran.xposedapp</item>
+    <string-array name="xposedscope">
+        <!-- 这里填写模块的作用域应用的包名，填多个。 -->
+        <item>com.ss.android.lark</item>
     </string-array>
 </resources>
