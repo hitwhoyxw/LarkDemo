@@ -8,11 +8,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
-import com.android.larkdemo.Utils.ContentProviderUtils;
-import com.android.larkdemo.Utils.MyConfig;
+import com.android.larkdemo.Utils.ConfigUtils;
 import com.android.larkdemo.Utils.HookUtils;
 import com.android.larkdemo.Utils.LogUtil;
-import com.crossbowffs.remotepreferences.RemotePreferences;
 import com.google.gson.Gson;
 
 import com.google.gson.JsonObject;
@@ -36,10 +34,8 @@ import static de.robv.android.xposed.XposedHelpers.findClass;
 
 public class HookEntry implements IXposedHookLoadPackage {
     public static String TAG = "Demo";
+    private ConfigUtils configUtils;
 
-    public SharedPreferences xSharedPreferences = null;
-    public SharedPreferences sharedPreferences = null;
-    SharedPreferences.Editor editor = null;
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (loadPackageParam.packageName.equals(HookUtils.XPOSED_HOOK_PACKAGE)) {
@@ -95,10 +91,12 @@ public class HookEntry implements IXposedHookLoadPackage {
                                         JsonObject device_info = jsonObject.get("device_info").getAsJsonObject();
                                         String version = device_info.get("finance_sdk_version").getAsString();
 
-                                        String configVersion = sharedPreferences.getString("finance_sdk_version", "0.0.0");
+                                        ConfigUtils.ConfigObject configObject = configUtils.getConfig();
+                                        String configVersion = configObject.finance_sdk_version;
                                         if (HookUtils.compareVersions(version, configVersion) >= 0) {
                                             configVersion = version;
-                                            editor.putString("finance_sdk_version", configVersion);
+                                            configObject.finance_sdk_version = version;
+                                            configUtils.saveConfig(configObject);
                                             LogUtil.PrintLog("update version finance_sdk_version=" + version, "sdkSenderHook");
                                         }
                                     }
@@ -129,32 +127,39 @@ public class HookEntry implements IXposedHookLoadPackage {
                     String strMsg = gson.toJson(param.args[param.args.length - 1]);
                     //LogUtil.PrintLog("addMsg = " + strMsg, "addMsg");
 
+                    ConfigUtils.ConfigObject configObject = configUtils.getConfig();
+
                     JsonObject jsonObject = gson.fromJson(strMsg, JsonObject.class);
                     String type = jsonObject.getAsJsonObject("mMessage").get("type").getAsString();
-                    boolean isMoudleEnable = xSharedPreferences.getBoolean("isMoudleEnable",false);
-                    if (type != null && type.equals("RED_PACKET") && isMoudleEnable) {
+
+
+                    if (type != null && type.equals("RED_PACKET") && configObject.isMoudleEnable) {
                         String redPacketId = jsonObject.getAsJsonObject("mMessage").getAsJsonObject("messageContent").get("redPacketId").getAsString();
                         String subject = jsonObject.getAsJsonObject("mMessage").getAsJsonObject("messageContent").get("subject").getAsString();
 
-                        if (HookUtils.containMuteWord(subject, xSharedPreferences.getString("muteKeyword",""))) {
-                            LogUtil.PrintLog("mute redpacket subject = "+subject,"mute redpacket");
+                        if (configObject.isMuteEnable && HookUtils.containMuteWord(subject, configObject.muteKeyword)) {
+                            LogUtil.PrintLog("mute redpacket subject = " + subject, "mute redpacket");
                             return;
                         }
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    int delayTimeMin = (int) (xSharedPreferences.getFloat("delayTimeMin",0f)) * 1000;
-                                    int daleyTimeMax = (int) xSharedPreferences.getFloat("daleyTimeMax",0f) * 1000;
-                                    int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
-                                    LogUtil.PrintLog("delay grab time = "+mSec,"delay grab");
-                                    Thread.sleep(mSec);
-                                    CallRequestBuilder(dexClassLoader, redPacketId, MyConfig.finance_sdk_version, MyConfig.is_return_name_auth, 1);
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
+                        if (configObject.isDelayEnable) {
+                            LogUtil.PrintLog("delay grab redpacket subject = " + subject, "delay grab");
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        int delayTimeMin = (int) configObject.delayTimeMin * 1000;
+                                        int daleyTimeMax = (int) configObject.daleyTimeMax * 1000;
+                                        int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
+                                        LogUtil.PrintLog("delay grab time = " + mSec, "delay grab");
+                                        Thread.sleep(mSec);
+                                        CallRequestBuilder(dexClassLoader, redPacketId, configObject.finance_sdk_version, true, 1);
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
                                 }
-                            }
-                        }).start();
+                            }).start();
+                        }
+
                         //CallRequestBuilder(dexClassLoader, redPacketId, Config.finance_sdk_version, Config.is_return_name_auth, 1);
                     }
                 }
@@ -308,8 +313,7 @@ public class HookEntry implements IXposedHookLoadPackage {
 
     private void initConfigSetting(Context context) {
         try {
-            sharedPreferences = context.getSharedPreferences(ContentProviderUtils.prefFileNames[ContentProviderUtils.MY_CONFIG], Context.MODE_PRIVATE);
-            xSharedPreferences = new RemotePreferences(context, ContentProviderUtils.authority, ContentProviderUtils.prefFileNames[ContentProviderUtils.MODULE_CONFIG]);
+            configUtils = new ConfigUtils(context);
         } catch (Exception e) {
             LogUtil.PrintLog("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
         }

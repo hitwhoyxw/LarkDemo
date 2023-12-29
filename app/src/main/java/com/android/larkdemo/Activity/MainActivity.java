@@ -16,31 +16,30 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.android.larkdemo.R;
+import com.android.larkdemo.Utils.ConfigUtils;
 import com.android.larkdemo.Utils.HookUtils;
 import com.android.larkdemo.Utils.LogUtil;
 
 public class MainActivity extends AppCompatActivity {
 
-    boolean isMoudleEnable = false;
-    boolean isDelayEnable = false;
-    boolean isMuteEnable = false;
-    float delayTimeMin = 0;
-    float daleyTimeMax = 0;
-    String muteKeyword = "";
+    ConfigUtils.ConfigObject configObject;
+    ConfigUtils configUtils;
     Switch moudleSwitch;
     Switch delaySwitch;
     Switch muteSwitch;
     EditText delayTimeMinEditText;
     EditText delayTimeMaxEditText;
     EditText muteKeywordEditText;
-    SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        configUtils = new ConfigUtils(this);
+
         readAllConfig();
-        initConfigSetting();
+
         findAllView();
         setListeners();
     }
@@ -51,15 +50,6 @@ public class MainActivity extends AppCompatActivity {
         saveAllConfig();
         super.onDestroy();
 
-    }
-
-    private void initConfigSetting() {
-        try {
-            sharedPreferences = getSharedPreferences("module_config", Context.MODE_PRIVATE);
-        } catch (SecurityException e) {
-            Log.i("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
-            sharedPreferences = null;
-        }
     }
 
     public void findAllView() {
@@ -75,21 +65,21 @@ public class MainActivity extends AppCompatActivity {
         moudleSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                isMoudleEnable = isChecked;
+                configObject.isMoudleEnable = isChecked;
                 saveAllConfig();
             }
         });
         delaySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                isDelayEnable = isChecked;
+                configObject.isDelayEnable = isChecked;
                 saveAllConfig();
             }
         });
         muteSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                isMuteEnable = isChecked;
+                configObject.isMuteEnable = isChecked;
                 saveAllConfig();
             }
         });
@@ -100,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 try {
-                    delayTimeMin = Float.parseFloat(delayTimeMinEditText.getText().toString());
+                    configObject.delayTimeMin = Float.parseFloat(delayTimeMinEditText.getText().toString());
                     saveAllConfig();
                 } catch (ClassCastException e) {
                     e.printStackTrace();
@@ -114,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 try {
-                    daleyTimeMax = Float.parseFloat(delayTimeMaxEditText.getText().toString());
+                    configObject.daleyTimeMax = Float.parseFloat(delayTimeMaxEditText.getText().toString());
                     saveAllConfig();
                 } catch (ClassCastException e) {
                     e.printStackTrace();
@@ -128,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
                 try {
-                    muteKeyword = muteKeywordEditText.getText().toString();
+                    configObject.muteKeyword = muteKeywordEditText.getText().toString();
                     saveAllConfig();
                 } catch (ClassCastException e) {
                     e.printStackTrace();
@@ -139,21 +129,15 @@ public class MainActivity extends AppCompatActivity {
 
     public void readAllConfig() {
         try {
-            isMoudleEnable = sharedPreferences.getBoolean("isMoudleEnable", false);
-            isDelayEnable = sharedPreferences.getBoolean("isDelayEnable", false);
-            isMuteEnable = sharedPreferences.getBoolean("isMuteEnable", false);
-            delayTimeMin = sharedPreferences.getFloat("delayTimeMin", 0);
-            daleyTimeMax = sharedPreferences.getFloat("daleyTimeMax", 0);
-            muteKeyword = sharedPreferences.getString("muteKeyword", "");
+            configObject = configUtils.getConfig();
 
-
-            moudleSwitch.setChecked(isMoudleEnable);
-            delaySwitch.setChecked(isDelayEnable);
-            muteSwitch.setChecked(isMuteEnable);
-            delayTimeMinEditText.setText(String.valueOf(delayTimeMin));
-            delayTimeMaxEditText.setText(String.valueOf(daleyTimeMax));
-            muteKeywordEditText.setText(muteKeyword);
-        } catch (NullPointerException e) {
+            moudleSwitch.setChecked(configObject.isMoudleEnable);
+            delaySwitch.setChecked(configObject.isDelayEnable);
+            muteSwitch.setChecked(configObject.isMuteEnable);
+            delayTimeMinEditText.setText(String.valueOf(configObject.delayTimeMin));
+            delayTimeMaxEditText.setText(String.valueOf(configObject.daleyTimeMax));
+            muteKeywordEditText.setText(configObject.muteKeyword);
+        } catch (Exception e) {
             Log.i("readAllConfig error:" + e.getMessage(), "readAllConfig");
         }
 
@@ -161,13 +145,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void saveAllConfig() {
         try {
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putBoolean("isMoudleEnable", isMoudleEnable);
-            editor.putBoolean("isDelayEnable", isDelayEnable);
-            editor.putBoolean("isMuteEnable", isMuteEnable);
-            editor.putFloat("delayTimeMin", delayTimeMin);
-            editor.putFloat("daleyTimeMax", daleyTimeMax);
-            editor.putString("muteKeyword", muteKeyword);
+            configUtils.saveConfig(configObject);
         } catch (NullPointerException e) {
             Log.i("saveAllConfig error:" + e.getMessage(), "saveAllConfig");
         }
