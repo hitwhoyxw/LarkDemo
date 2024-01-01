@@ -17,6 +17,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Random;
 
@@ -122,18 +123,18 @@ public class HookEntry implements IXposedHookLoadPackage {
         try {
             XposedBridge.hookAllMethods(XposedHelpers.findClass("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader), "add", new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
+                protected void beforeHookedMethod(MethodHookParam param) throws IOException {
                     Gson gson = new Gson();
                     String strMsg = gson.toJson(param.args[param.args.length - 1]);
-                    //LogUtil.PrintLog("addMsg = " + strMsg, "addMsg");
+                    LogUtil.PrintLog("addMsg = " + strMsg, "addMsg");
 
                     ConfigUtils.ConfigObject configObject = configUtils.getConfig();
 
+                    LogUtil.PrintLog("configObject = " + new Gson().toJson(configObject), "configObject");
                     JsonObject jsonObject = gson.fromJson(strMsg, JsonObject.class);
                     String type = jsonObject.getAsJsonObject("mMessage").get("type").getAsString();
-
-
                     if (type != null && type.equals("RED_PACKET") && configObject.isMoudleEnable) {
+                        LogUtil.PrintLog("find redpacket", "hookmsg");
                         String redPacketId = jsonObject.getAsJsonObject("mMessage").getAsJsonObject("messageContent").get("redPacketId").getAsString();
                         String subject = jsonObject.getAsJsonObject("mMessage").getAsJsonObject("messageContent").get("subject").getAsString();
 
@@ -160,7 +161,10 @@ public class HookEntry implements IXposedHookLoadPackage {
                             }).start();
                         }
 
-                        //CallRequestBuilder(dexClassLoader, redPacketId, Config.finance_sdk_version, Config.is_return_name_auth, 1);
+                        else {
+                            CallRequestBuilder(dexClassLoader, redPacketId, configObject.finance_sdk_version, configObject.is_return_name_auth, 1);
+                        }
+
                     }
                 }
             });
@@ -313,7 +317,7 @@ public class HookEntry implements IXposedHookLoadPackage {
 
     private void initConfigSetting(Context context) {
         try {
-            configUtils = new ConfigUtils(context);
+            configUtils = ConfigUtils.getInstance();
         } catch (Exception e) {
             LogUtil.PrintLog("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
         }
