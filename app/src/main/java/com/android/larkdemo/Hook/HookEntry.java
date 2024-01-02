@@ -44,7 +44,6 @@ public class HookEntry implements IXposedHookLoadPackage {
             findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     Context context = (Context) param.args[0];
-                    HookUtils.requestPemission(context);
                     initConfigSetting(context);
                     ClassLoader dexClassLoader = context.getClassLoader();
                     if (dexClassLoader == null) {
@@ -172,9 +171,14 @@ public class HookEntry implements IXposedHookLoadPackage {
         }
     }
 
-    public void HookNotification(ClassLoader dexClassLoader) {
+    public void getPermissionHook(ClassLoader dexClassLoader) {
         try {
-
+            XposedHelpers.findAndHookMethod("com.ss.android.lark.main.app.MainActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    HookUtils.requestPemission((Context) param.thisObject);
+                }
+            });
         } catch (Exception e) {
             e.printStackTrace();
         }
