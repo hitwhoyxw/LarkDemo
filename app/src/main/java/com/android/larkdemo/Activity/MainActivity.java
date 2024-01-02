@@ -35,8 +35,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        configUtils =ConfigUtils.getInstance();
+        HookUtils.requestPemission(this);
+        configUtils = ConfigUtils.getInstance();
         findAllView();
         readAllConfig();
         setListeners();

@@ -2,10 +2,7 @@ package com.android.larkdemo.Hook;
 
 
 import android.app.Application;
-import android.app.Notification;
-import android.app.NotificationManager;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.util.Log;
 
 import com.android.larkdemo.Utils.ConfigUtils;
@@ -20,6 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Random;
+
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -46,6 +44,7 @@ public class HookEntry implements IXposedHookLoadPackage {
             findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     Context context = (Context) param.args[0];
+                    HookUtils.requestPemission(context);
                     initConfigSetting(context);
                     ClassLoader dexClassLoader = context.getClassLoader();
                     if (dexClassLoader == null) {
@@ -57,8 +56,6 @@ public class HookEntry implements IXposedHookLoadPackage {
                     HookMsg(dexClassLoader);
                     //HookNotification(dexClassLoader);
                 }
-
-
             });
         }
     }

@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-
 import de.robv.android.xposed.XposedBridge;
 
 public class LogUtil {

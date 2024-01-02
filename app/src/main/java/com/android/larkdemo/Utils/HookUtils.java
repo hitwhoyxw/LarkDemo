@@ -1,25 +1,20 @@
 package com.android.larkdemo.Utils;
 
-import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Context;
-import android.content.SharedPreferences;
+import android.content.DialogInterface;
+import android.widget.Toast;
+
+import androidx.fragment.app.Fragment;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import com.hjq.permissions.OnPermissionCallback;
+import com.hjq.permissions.Permission;
+import com.hjq.permissions.XXPermissions;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Properties;
-import java.util.Set;
-
-import de.robv.android.xposed.XSharedPreferences;
+import java.util.List;
 
 public class HookUtils {
     public static String XPOSED_HOOK_PACKAGE = "com.ss.android.lark";
@@ -78,6 +73,7 @@ public class HookUtils {
         }
         return null;
     }
+
     public static int compareVersions(String version1, String version2) {
         String[] v1 = version1.split("\\.");
         String[] v2 = version2.split("\\.");
@@ -113,6 +109,54 @@ public class HookUtils {
         } else {
             return 0;
         }
+    }
+
+    public static void requestPemission(Context context) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("权限请求");
+        builder.setMessage("模块的配置文件读写需要授予外部存储读写权限，是否授予该应用权限？无权限无法工作");
+
+        builder.setPositiveButton("授予", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // 在此处添加授予权限的逻辑
+                XXPermissions.with(context)
+                        .permission(Permission.MANAGE_EXTERNAL_STORAGE)
+                        .request(new OnPermissionCallback() {
+                            @Override
+                            public void onGranted(List<String> permissions, boolean allGranted) {
+                                if (allGranted) {
+                                    Toast.makeText(context, "已授予外部存储读写权限", Toast.LENGTH_SHORT).show();
+                                } else {
+                                    Toast.makeText(context, "授予部分权限成功，可能会影响部分功能的使用", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+
+                            @Override
+                            public void onDenied(List<String> permissions, boolean doNotAskAgain) {
+                                if (doNotAskAgain) {
+                                    Toast.makeText(context, "已拒绝外部存储读写权限，请手动授予", Toast.LENGTH_SHORT).show();
+                                    XXPermissions.startPermissionActivity(context, permissions);
+                                } else {
+                                    Toast.makeText(context, "已拒绝外部存储读写权限", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        });
+                dialog.dismiss();
+            }
+        });
+
+        builder.setNegativeButton("拒绝", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                // 在此处添加拒绝权限的逻辑
+                Toast.makeText(context, "已拒绝权限", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+            }
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
 }
