@@ -112,6 +112,9 @@ public class HookUtils {
     }
 
     public static void requestPemission(Context context) {
+        if (XXPermissions.isGranted(context, Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE)) {
+            return;
+        }
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("权限请求");
         builder.setMessage("模块的配置文件读写需要授予外部存储读写权限，是否授予该应用权限？无权限无法工作");
@@ -121,7 +124,7 @@ public class HookUtils {
             public void onClick(DialogInterface dialog, int which) {
                 // 在此处添加授予权限的逻辑
                 XXPermissions.with(context)
-                        .permission(Permission.MANAGE_EXTERNAL_STORAGE)
+                        .permission(Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE)
                         .request(new OnPermissionCallback() {
                             @Override
                             public void onGranted(List<String> permissions, boolean allGranted) {
