@@ -5,9 +5,11 @@ import android.app.Application;
 import android.content.Context;
 import android.util.Log;
 
+import com.android.larkdemo.Utils.ConfigObject;
 import com.android.larkdemo.Utils.ConfigUtils;
 import com.android.larkdemo.Utils.HookUtils;
 import com.android.larkdemo.Utils.LogUtil;
+import com.android.larkdemo.Utils.MyCallback;
 import com.google.gson.Gson;
 
 import com.google.gson.JsonObject;
@@ -35,6 +37,7 @@ public class HookEntry implements IXposedHookLoadPackage {
     public static String TAG = "Demo";
     private ConfigUtils configUtils;
 
+    private static ConfigObject configObject;
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (loadPackageParam.packageName.equals(HookUtils.XPOSED_HOOK_PACKAGE)) {
@@ -44,7 +47,6 @@ public class HookEntry implements IXposedHookLoadPackage {
             findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     Context context = (Context) param.args[0];
-                    initConfigSetting(context);
                     ClassLoader dexClassLoader = context.getClassLoader();
                     if (dexClassLoader == null) {
                         XposedBridge.log("cannot get classloader return ");
@@ -56,6 +58,27 @@ public class HookEntry implements IXposedHookLoadPackage {
                     //HookNotification(dexClassLoader);
                 }
             });
+        }
+    }
+
+    public void getPermissionHook(ClassLoader dexClassLoader) {
+        try {
+            XposedHelpers.findAndHookMethod("com.ss.android.lark.main.app.MainActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    Context context = (Context) param.thisObject;
+                    initConfigSetting(context);
+                    configObject = ConfigObject.CreateDefaultConfigObject(true);
+                    HookUtils.requestPemission(context, new MyCallback() {
+                        @Override
+                        public void onCallback() {
+                            configObject = configUtils.getConfig();
+                        }
+                    });
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -88,7 +111,10 @@ public class HookEntry implements IXposedHookLoadPackage {
                                         JsonObject device_info = jsonObject.get("device_info").getAsJsonObject();
                                         String version = device_info.get("finance_sdk_version").getAsString();
 
-                                        ConfigUtils.ConfigObject configObject = configUtils.getConfig();
+                                        ConfigObject configObject = configUtils.getConfig();
+                                        if (configObject == null) {
+                                            return;
+                                        }
                                         String configVersion = configObject.finance_sdk_version;
                                         if (HookUtils.compareVersions(version, configVersion) >= 0) {
                                             configVersion = version;
@@ -122,10 +148,13 @@ public class HookEntry implements IXposedHookLoadPackage {
                 protected void beforeHookedMethod(MethodHookParam param) throws IOException {
                     Gson gson = new Gson();
                     String strMsg = gson.toJson(param.args[param.args.length - 1]);
-                    LogUtil.PrintLog("addMsg = " + strMsg, "addMsg");
+                    LogUtil.PrintLog("addMsg = " + strMsg, "TAG");
 
-                    ConfigUtils.ConfigObject configObject = configUtils.getConfig();
-
+                    ConfigObject configObject = configUtils.getConfig();
+                    if (configObject == null) {
+                        LogUtil.PrintLog("HookMsg configObject is null", TAG);
+                        return;
+                    }
                     LogUtil.PrintLog("configObject = " + new Gson().toJson(configObject), "configObject");
                     JsonObject jsonObject = gson.fromJson(strMsg, JsonObject.class);
                     String type = jsonObject.getAsJsonObject("mMessage").get("type").getAsString();
@@ -135,11 +164,11 @@ public class HookEntry implements IXposedHookLoadPackage {
                         String subject = jsonObject.getAsJsonObject("mMessage").getAsJsonObject("messageContent").get("subject").getAsString();
 
                         if (configObject.isMuteEnable && HookUtils.containMuteWord(subject, configObject.muteKeyword)) {
-                            LogUtil.PrintLog("mute redpacket subject = " + subject, "mute redpacket");
+                            LogUtil.PrintLog("mute redpacket subject = " + subject, TAG);
                             return;
                         }
                         if (configObject.isDelayEnable) {
-                            LogUtil.PrintLog("delay grab redpacket subject = " + subject, "delay grab");
+                            LogUtil.PrintLog("delay grab redpacket subject = " + subject, TAG);
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -147,7 +176,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                                         int delayTimeMin = (int) configObject.delayTimeMin * 1000;
                                         int daleyTimeMax = (int) configObject.daleyTimeMax * 1000;
                                         int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
-                                        LogUtil.PrintLog("delay grab time = " + mSec, "delay grab");
+                                        LogUtil.PrintLog("delay grab time = " + mSec, TAG);
                                         Thread.sleep(mSec);
                                         CallRequestBuilder(dexClassLoader, redPacketId, configObject.finance_sdk_version, true, 1);
                                     } catch (InterruptedException e) {
@@ -166,19 +195,6 @@ public class HookEntry implements IXposedHookLoadPackage {
             });
 
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void getPermissionHook(ClassLoader dexClassLoader) {
-        try {
-            XposedHelpers.findAndHookMethod("com.ss.android.lark.main.app.MainActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    HookUtils.requestPemission((Context) param.thisObject);
-                }
-            });
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -319,6 +335,7 @@ public class HookEntry implements IXposedHookLoadPackage {
     private void initConfigSetting(Context context) {
         try {
             configUtils = ConfigUtils.getInstance();
+            configUtils.init();
         } catch (Exception e) {
             LogUtil.PrintLog("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
         }

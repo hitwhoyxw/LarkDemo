@@ -16,13 +16,15 @@ import android.widget.Switch;
 import android.widget.TextView;
 
 import com.android.larkdemo.R;
+import com.android.larkdemo.Utils.ConfigObject;
 import com.android.larkdemo.Utils.ConfigUtils;
 import com.android.larkdemo.Utils.HookUtils;
-import com.android.larkdemo.Utils.LogUtil;
+import com.android.larkdemo.Utils.MyCallback;
 
 public class MainActivity extends AppCompatActivity {
 
-    ConfigUtils.ConfigObject configObject;
+    private static final String TAG = "LarkDemo";
+    static ConfigObject configObject;
     ConfigUtils configUtils;
     Switch moudleSwitch;
     Switch delaySwitch;
@@ -35,11 +37,17 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        HookUtils.requestPemission(this);
         configUtils = ConfigUtils.getInstance();
+        configUtils.init();
         findAllView();
         readAllConfig();
         setListeners();
+        HookUtils.requestPemission(this, new MyCallback() {
+            @Override
+            public void onCallback() {
+                System.exit(0);
+            }
+        });
     }
 
 
@@ -126,26 +134,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void readAllConfig() {
-        try {
-            configObject = configUtils.getConfig();
-
-            moudleSwitch.setChecked(configObject.isMoudleEnable);
-            delaySwitch.setChecked(configObject.isDelayEnable);
-            muteSwitch.setChecked(configObject.isMuteEnable);
-            delayTimeMinEditText.setText(String.valueOf(configObject.delayTimeMin));
-            delayTimeMaxEditText.setText(String.valueOf(configObject.daleyTimeMax));
-            muteKeywordEditText.setText(configObject.muteKeyword);
-        } catch (Exception e) {
-            Log.i("readAllConfig error:" + e.getMessage(), "readAllConfig");
+        configObject = configUtils.getConfig();
+        if (configObject == null) {
+            Log.i(TAG, "readAllConfig: " + "configObject is null");
+            return;
         }
-
+        moudleSwitch.setChecked(configObject.isMoudleEnable);
+        delaySwitch.setChecked(configObject.isDelayEnable);
+        muteSwitch.setChecked(configObject.isMuteEnable);
+        delayTimeMinEditText.setText(String.valueOf(configObject.delayTimeMin));
+        delayTimeMaxEditText.setText(String.valueOf(configObject.daleyTimeMax));
+        muteKeywordEditText.setText(configObject.muteKeyword);
     }
 
     public void saveAllConfig() {
         try {
             configUtils.saveConfig(configObject);
         } catch (NullPointerException e) {
-            Log.i("saveAllConfig error:" + e.getMessage(), "saveAllConfig");
+            Log.i(TAG, "saveAllConfig" + e.getMessage());
         }
 
     }

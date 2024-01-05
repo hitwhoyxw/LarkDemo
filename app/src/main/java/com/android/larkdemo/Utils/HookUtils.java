@@ -111,8 +111,8 @@ public class HookUtils {
         }
     }
 
-    public static void requestPemission(Context context) {
-        if (XXPermissions.isGranted(context, Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE)) {
+    public static void requestPemission(Context context, MyCallback myCallback) {
+        if (XXPermissions.isGranted(context, Permission.MANAGE_EXTERNAL_STORAGE)) {
             return;
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
@@ -124,11 +124,14 @@ public class HookUtils {
             public void onClick(DialogInterface dialog, int which) {
                 // 在此处添加授予权限的逻辑
                 XXPermissions.with(context)
-                        .permission(Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE)
+                        .permission(Permission.MANAGE_EXTERNAL_STORAGE)
                         .request(new OnPermissionCallback() {
                             @Override
                             public void onGranted(List<String> permissions, boolean allGranted) {
                                 if (allGranted) {
+                                    if (myCallback != null) {
+                                        myCallback.onCallback();
+                                    }
                                     Toast.makeText(context, "已授予外部存储读写权限", Toast.LENGTH_SHORT).show();
                                 } else {
                                     Toast.makeText(context, "授予部分权限成功，可能会影响部分功能的使用", Toast.LENGTH_SHORT).show();
@@ -163,3 +166,4 @@ public class HookUtils {
     }
 
 }
+
