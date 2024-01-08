@@ -53,7 +53,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                         return;
                     }
                     HookStackTrace(dexClassLoader);
-                    HookSDKSender(dexClassLoader, false);
+                    //HookSDKSender(dexClassLoader, false);
                     HookMsg(dexClassLoader);
                     //HookNotification(dexClassLoader);
                 }
@@ -69,12 +69,12 @@ public class HookEntry implements IXposedHookLoadPackage {
                     Context context = (Context) param.thisObject;
                     initConfigSetting(context);
                     configObject = ConfigObject.CreateDefaultConfigObject(true);
-                    HookUtils.requestPemission(context, new MyCallback() {
-                        @Override
-                        public void onCallback() {
-                            configObject = configUtils.getConfig();
-                        }
-                    });
+//                    HookUtils.requestPemission(context, new MyCallback() {
+//                        @Override
+//                        public void onCallback() {
+//                            configObject = configUtils.getConfig();
+//                        }
+//                    });
                 }
             });
         } catch (Exception e) {
@@ -82,64 +82,64 @@ public class HookEntry implements IXposedHookLoadPackage {
         }
     }
 
-    public Method HookSDKSender(ClassLoader dexClassLoader, boolean getMethod) {
-        try {
-            //device_info{"finance_sdk_version":"6.8.8,"hongbao_type":"NORMAL","id":"xxx","is_return_name_auth":"true"}
-            //Command.GRAB_HONGBAO=2401
-            Class sdkSenderCls = findClass("com.ss.android.lark.sdk.SdkSender", dexClassLoader);
-            String methodName = "asynSendRequestNonWrap";
-            int paramCount = 4;
-            if (sdkSenderCls != null) {
-                Method[] methods = sdkSenderCls.getDeclaredMethods();
-                for (Method m : methods) {
-                    if (m.getName().equals(methodName) && m.getParameterCount() == paramCount) {
-                        LogUtil.PrintLog("find sdkSender.asynSendRequestNonWrap", "sdkSenderHook");
-                        if (getMethod) {
-                            return m;
-                        }
-                        XposedBridge.hookMethod(m, new XC_MethodHook() {
-                            @Override
-                            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                                Object command = param.args[0];
-                                Object msgBuilder = param.args[1];
-                                String strCmd = new Gson().toJson(command);
-                                String strMsg = new Gson().toJson(msgBuilder);
-                                if (strCmd.contains("GRAB_HONGBAO")) {
-                                    JsonParser parser = new JsonParser();
-                                    JsonObject jsonObject = parser.parse(strMsg).getAsJsonObject();
-                                    if (jsonObject.has("device_info")) {
-                                        JsonObject device_info = jsonObject.get("device_info").getAsJsonObject();
-                                        String version = device_info.get("finance_sdk_version").getAsString();
-
-                                        ConfigObject configObject = configUtils.getConfig();
-                                        if (configObject == null) {
-                                            return;
-                                        }
-                                        String configVersion = configObject.finance_sdk_version;
-                                        if (HookUtils.compareVersions(version, configVersion) >= 0) {
-                                            configVersion = version;
-                                            configObject.finance_sdk_version = version;
-                                            configUtils.saveConfig(configObject);
-                                            LogUtil.PrintLog("update version finance_sdk_version=" + version, "sdkSenderHook");
-                                        }
-                                    }
-                                }
-                                LogUtil.PrintLog("command = " + strCmd, methodName);
-                                LogUtil.PrintLog("msgBuilder = " + strMsg, methodName);
-                                if (strCmd.contains("HONGBAO")) {
-                                    //LogUtil.PrintStackTrace(0);
-                                }
-                            }
-                        });
-                        break;
-                    }
-                }
-            }
-        } catch (Exception e) {
-            LogUtil.PrintLog(e.toString(), "asynSendRequestNonWrap");
-        }
-        return null;
-    }
+//    public Method HookSDKSender(ClassLoader dexClassLoader, boolean getMethod) {
+//        try {
+//            //device_info{"finance_sdk_version":"6.8.8,"hongbao_type":"NORMAL","id":"xxx","is_return_name_auth":"true"}
+//            //Command.GRAB_HONGBAO=2401
+//            Class sdkSenderCls = findClass("com.ss.android.lark.sdk.SdkSender", dexClassLoader);
+//            String methodName = "asynSendRequestNonWrap";
+//            int paramCount = 4;
+//            if (sdkSenderCls != null) {
+//                Method[] methods = sdkSenderCls.getDeclaredMethods();
+//                for (Method m : methods) {
+//                    if (m.getName().equals(methodName) && m.getParameterCount() == paramCount) {
+//                        LogUtil.PrintLog("find sdkSender.asynSendRequestNonWrap", "sdkSenderHook");
+//                        if (getMethod) {
+//                            return m;
+//                        }
+//                        XposedBridge.hookMethod(m, new XC_MethodHook() {
+//                            @Override
+//                            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                                Object command = param.args[0];
+//                                Object msgBuilder = param.args[1];
+//                                String strCmd = new Gson().toJson(command);
+//                                String strMsg = new Gson().toJson(msgBuilder);
+//                                if (strCmd.contains("GRAB_HONGBAO")) {
+//                                    JsonParser parser = new JsonParser();
+//                                    JsonObject jsonObject = parser.parse(strMsg).getAsJsonObject();
+//                                    if (jsonObject.has("device_info")) {
+//                                        JsonObject device_info = jsonObject.get("device_info").getAsJsonObject();
+//                                        String version = device_info.get("finance_sdk_version").getAsString();
+//
+//                                        ConfigObject configObject = configUtils.getConfig();
+//                                        if (configObject == null) {
+//                                            return;
+//                                        }
+//                                        String configVersion = configObject.finance_sdk_version;
+//                                        if (HookUtils.compareVersions(version, configVersion) >= 0) {
+//                                            configVersion = version;
+//                                            configObject.finance_sdk_version = version;
+//                                            configUtils.saveConfig(configObject);
+//                                            LogUtil.PrintLog("update version finance_sdk_version=" + version, "sdkSenderHook");
+//                                        }
+//                                    }
+//                                }
+//                                LogUtil.PrintLog("command = " + strCmd, methodName);
+//                                LogUtil.PrintLog("msgBuilder = " + strMsg, methodName);
+//                                if (strCmd.contains("HONGBAO")) {
+//                                    //LogUtil.PrintStackTrace(0);
+//                                }
+//                            }
+//                        });
+//                        break;
+//                    }
+//                }
+//            }
+//        } catch (Exception e) {
+//            LogUtil.PrintLog(e.toString(), "asynSendRequestNonWrap");
+//        }
+//        return null;
+//    }
 
     public void HookMsg(ClassLoader dexClassLoader) {
         try {
@@ -178,7 +178,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                                         int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
                                         LogUtil.PrintLog("delay grab time = " + mSec, TAG);
                                         Thread.sleep(mSec);
-                                        CallRequestBuilder(dexClassLoader, redPacketId, configObject.finance_sdk_version, true, 1);
+                                        CallRequestBuilder(dexClassLoader, redPacketId, ConfigUtils.finance_sdk_version, ConfigUtils.is_return_name_auth, 1);
                                     } catch (InterruptedException e) {
                                         e.printStackTrace();
                                     }
@@ -187,7 +187,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                         }
 
                         else {
-                            CallRequestBuilder(dexClassLoader, redPacketId, configObject.finance_sdk_version, configObject.is_return_name_auth, 1);
+                            CallRequestBuilder(dexClassLoader, redPacketId, ConfigUtils.finance_sdk_version, ConfigUtils.is_return_name_auth, 1);
                         }
 
                     }
@@ -335,7 +335,7 @@ public class HookEntry implements IXposedHookLoadPackage {
     private void initConfigSetting(Context context) {
         try {
             configUtils = ConfigUtils.getInstance();
-            configUtils.init();
+            configUtils.init(false, null);
         } catch (Exception e) {
             LogUtil.PrintLog("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
         }

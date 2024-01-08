@@ -38,16 +38,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         configUtils = ConfigUtils.getInstance();
-        configUtils.init();
+        configUtils.init(true, this);
         findAllView();
         readAllConfig();
         setListeners();
-        HookUtils.requestPemission(this, new MyCallback() {
-            @Override
-            public void onCallback() {
-                System.exit(0);
-            }
-        });
+//        HookUtils.requestPemission(this, new MyCallback() {
+//            @Override
+//            public void onCallback() {
+//                System.exit(0);
+//            }
+//        });
     }
 
 
