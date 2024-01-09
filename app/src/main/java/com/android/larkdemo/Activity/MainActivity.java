@@ -134,7 +134,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void readAllConfig() {
-        configObject = configUtils.getConfig();
+        configObject = configUtils.getConfig(true);
         if (configObject == null) {
             Log.i(TAG, "readAllConfig: " + "configObject is null");
             return;

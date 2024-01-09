@@ -16,7 +16,8 @@ public class ConfigUtils {
     public static boolean is_return_name_auth = true;
     private String configName = "myConfig";
 
-    public SharedPreferences sharedPreferences;
+    private SharedPreferences sharedPreferences;
+    private XSharedPreferences xSharedPreferences;
     public static ConfigUtils instance;
 
     private ConfigUtils() {
@@ -40,6 +41,14 @@ public class ConfigUtils {
         }
     }
 
+    public XSharedPreferences getxSharedPreferences() {
+        return xSharedPreferences != null ? xSharedPreferences : null;
+    }
+
+    public SharedPreferences getSharedPreferences() {
+        return sharedPreferences != null ? sharedPreferences : null;
+    }
+
     public void saveConfig(ConfigObject configObject) {
         try {
             SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -55,7 +64,16 @@ public class ConfigUtils {
         }
     }
 
-    public ConfigObject getConfig() {
+    public ConfigObject getConfig(boolean isModule) {
+        ConfigObject configObject = null;
+        if (isModule) {
+            return getConfigInModule();
+        } else {
+            return getConfigInApp();
+        }
+    }
+
+    public ConfigObject getConfigInModule() {
         ConfigObject configObject = null;
         try {
             configObject = new ConfigObject(
@@ -67,7 +85,24 @@ public class ConfigUtils {
                     sharedPreferences.getString("muteKeyword", "")
             );
         } catch (Exception e) {
-            Log.i(TAG, "getConfig: " + e.getMessage());
+            Log.i(TAG, "getConfigInModule: " + e.getMessage());
+        }
+        return configObject;
+    }
+
+    public ConfigObject getConfigInApp() {
+        ConfigObject configObject = null;
+        try {
+            configObject = new ConfigObject(
+                    xSharedPreferences.getBoolean("isMoudleEnable", false),
+                    xSharedPreferences.getBoolean("isDelayEnable", false),
+                    xSharedPreferences.getBoolean("isMuteEnable", false),
+                    xSharedPreferences.getFloat("delayTimeMin", 0f),
+                    xSharedPreferences.getFloat("daleyTimeMax", 0f),
+                    xSharedPreferences.getString("muteKeyword", "")
+            );
+        } catch (Exception e) {
+            Log.i(TAG, "getConfigInApp: " + e.getMessage());
         }
         return configObject;
     }

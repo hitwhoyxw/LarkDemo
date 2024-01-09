@@ -150,7 +150,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                     String strMsg = gson.toJson(param.args[param.args.length - 1]);
                     LogUtil.PrintLog("addMsg = " + strMsg, "TAG");
 
-                    ConfigObject configObject = configUtils.getConfig();
+                    ConfigObject configObject = configUtils.getConfig(false);
                     if (configObject == null) {
                         LogUtil.PrintLog("HookMsg configObject is null", TAG);
                         return;
