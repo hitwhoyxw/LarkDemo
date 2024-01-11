@@ -60,6 +60,12 @@ public class HookEntry implements IXposedHookLoadPackage {
                     HookMsg(dexClassLoader);
                 }
             });
+            findAndHookMethod(Application.class, "onTerminate", new XC_MethodHook() {
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    LogUtil.PrintLog("onTerminate", TAG);
+                    configUtils.unSetOnSharedPreferenceChangeListener();
+                }
+            });
         }
     }
 
@@ -162,8 +168,8 @@ public class HookEntry implements IXposedHookLoadPackage {
                                 @Override
                                 public void run() {
                                     try {
-                                        int delayTimeMin = (int) configObject.delayTimeMin * 1000;
-                                        int daleyTimeMax = (int) configObject.daleyTimeMax * 1000;
+                                        int delayTimeMin = Math.round(configObject.delayTimeMin * 1000);
+                                        int daleyTimeMax = Math.round(configObject.daleyTimeMax * 1000);
                                         int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
                                         LogUtil.PrintLog("delay grab time = " + mSec, TAG);
                                         Thread.sleep(mSec);
@@ -323,6 +329,7 @@ public class HookEntry implements IXposedHookLoadPackage {
         try {
             configUtils = ConfigUtils.getInstance();
             configUtils.init(false, null);
+            configUtils.setOnSharedPreferenceChangeListener();
         } catch (Exception e) {
             LogUtil.PrintLog("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
         }

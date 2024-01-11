@@ -18,6 +18,7 @@ public class ConfigUtils {
 
     private SharedPreferences sharedPreferences;
     private XSharedPreferences xSharedPreferences;
+    private XSharedPreferences.OnSharedPreferenceChangeListener listener;
     public static ConfigUtils instance;
 
     private ConfigUtils() {
@@ -56,8 +57,30 @@ public class ConfigUtils {
         }
     }
 
+    public void setOnSharedPreferenceChangeListener() {
+        if (null == listener) {
+            listener = new XSharedPreferences.OnSharedPreferenceChangeListener() {
+                @Override
+                public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+                    xSharedPreferences.reload();
+                }
+            };
+        }
+        if (sharedPreferences != null) {
+            LogUtil.PrintLog("setOnSharedPreferenceChangeListener", TAG);
+            sharedPreferences.registerOnSharedPreferenceChangeListener(listener);
+        }
+    }
+
     public void unSetOnSharedPreferenceChangeListener(SharedPreferences.OnSharedPreferenceChangeListener listener) {
         if (sharedPreferences != null && listener != null) {
+            sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener);
+        }
+    }
+
+    public void unSetOnSharedPreferenceChangeListener() {
+        if (sharedPreferences != null && listener != null) {
+            LogUtil.PrintLog("unSetOnSharedPreferenceChangeListener", TAG);
             sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener);
         }
     }
