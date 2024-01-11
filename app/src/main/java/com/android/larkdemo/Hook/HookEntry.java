@@ -29,19 +29,20 @@ import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 import static com.android.larkdemo.Utils.HookUtils.filterStackTrace;
+import static de.robv.android.xposed.XposedHelpers.callMethod;
 import static de.robv.android.xposed.XposedHelpers.callStaticMethod;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
+import static de.robv.android.xposed.XposedHelpers.findMethodBestMatch;
 
 public class HookEntry implements IXposedHookLoadPackage {
     public static String TAG = "Demo";
     private ConfigUtils configUtils;
+    private static String finance_sdk_version = null;
 
-    private static ConfigObject configObject;
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (loadPackageParam.packageName.equals(HookUtils.XPOSED_HOOK_PACKAGE)) {
-            //xSharedPreferences.reload();
             ClassLoader classLoader = loadPackageParam.classLoader;
             XposedBridge.log(TAG + " has Hooked!");
             findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
@@ -52,36 +53,22 @@ public class HookEntry implements IXposedHookLoadPackage {
                         XposedBridge.log("cannot get classloader return ");
                         return;
                     }
+                    initConfigSetting(null);
+                    hookConfigSetting(dexClassLoader);
                     HookStackTrace(dexClassLoader);
                     //HookSDKSender(dexClassLoader, false);
                     HookMsg(dexClassLoader);
-                    //HookNotification(dexClassLoader);
                 }
             });
         }
     }
 
-    public void getPermissionHook(ClassLoader dexClassLoader) {
-        try {
-            XposedHelpers.findAndHookMethod("com.ss.android.lark.main.app.MainActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    Context context = (Context) param.thisObject;
-                    initConfigSetting(context);
-                    configObject = ConfigObject.CreateDefaultConfigObject(true);
-//                    HookUtils.requestPemission(context, new MyCallback() {
-//                        @Override
-//                        public void onCallback() {
-//                            configObject = configUtils.getConfig();
-//                        }
-//                    });
-                }
-            });
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    //通过hook初始化一些通过hook才能获取的配置
+    public void hookConfigSetting(ClassLoader dexClassLoader) {
+        Class ttcjPayUtilsCls = findClass("com.android.ttcjpaysdk.ttcjpayapi.TTCJPayUtils", dexClassLoader);
+        Object ttcjPayUtilsInstantce = callStaticMethod(ttcjPayUtilsCls, "getInstance");
+        finance_sdk_version = (String) callMethod(ttcjPayUtilsInstantce, "getSDKVersion");
     }
-
 //    public Method HookSDKSender(ClassLoader dexClassLoader, boolean getMethod) {
 //        try {
 //            //device_info{"finance_sdk_version":"6.8.8,"hongbao_type":"NORMAL","id":"xxx","is_return_name_auth":"true"}
@@ -143,19 +130,21 @@ public class HookEntry implements IXposedHookLoadPackage {
 
     public void HookMsg(ClassLoader dexClassLoader) {
         try {
-            XposedBridge.hookAllMethods(XposedHelpers.findClass("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader), "add", new XC_MethodHook() {
+            Class basepageStoreCls = findClass("com.ss.android.lark.chatbase.BasePageStore$1", dexClassLoader);
+            Method method = findMethodBestMatch(basepageStoreCls, "add", Object.class);
+            XposedBridge.hookMethod(method, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws IOException {
                     Gson gson = new Gson();
-                    String strMsg = gson.toJson(param.args[param.args.length - 1]);
-                    LogUtil.PrintLog("addMsg = " + strMsg, "TAG");
+                    String strMsg = gson.toJson(param.args[0]);
+                    LogUtil.PrintLog("addMsg msgCount= " + param.args.length + "msgType = " + param.args[0].getClass().getName() + strMsg, TAG);
 
                     ConfigObject configObject = configUtils.getConfig(false);
                     if (configObject == null) {
                         LogUtil.PrintLog("HookMsg configObject is null", TAG);
                         return;
                     }
-                    LogUtil.PrintLog("configObject = " + new Gson().toJson(configObject), "configObject");
+                    LogUtil.PrintLog("configObject = " + new Gson().toJson(configObject), TAG);
                     JsonObject jsonObject = gson.fromJson(strMsg, JsonObject.class);
                     String type = jsonObject.getAsJsonObject("mMessage").get("type").getAsString();
                     if (type != null && type.equals("RED_PACKET") && configObject.isMoudleEnable) {
@@ -178,26 +167,24 @@ public class HookEntry implements IXposedHookLoadPackage {
                                         int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
                                         LogUtil.PrintLog("delay grab time = " + mSec, TAG);
                                         Thread.sleep(mSec);
-                                        CallRequestBuilder(dexClassLoader, redPacketId, ConfigUtils.finance_sdk_version, ConfigUtils.is_return_name_auth, 1);
+                                        CallRequestBuilder(dexClassLoader, redPacketId, finance_sdk_version, true, 1);
                                     } catch (InterruptedException e) {
                                         e.printStackTrace();
                                     }
                                 }
                             }).start();
-                        }
-
-                        else {
+                        } else {
                             CallRequestBuilder(dexClassLoader, redPacketId, ConfigUtils.finance_sdk_version, ConfigUtils.is_return_name_auth, 1);
                         }
 
                     }
                 }
             });
-
-
-        } catch (Exception e) {
+        } catch (
+                Exception e) {
             e.printStackTrace();
         }
+
     }
 
     public void HookPluginLoader(ClassLoader dexClassLoader) {

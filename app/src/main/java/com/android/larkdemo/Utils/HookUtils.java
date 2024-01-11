@@ -36,6 +36,9 @@ public class HookUtils {
     }
 
     public static boolean containMuteWord(String str, String muteWords) {
+        if (muteWords == null || muteWords.isEmpty()) {
+            return false;
+        }
         String[] muteWordsArray = muteWords.split("\\|");
         if (str == null || str.isEmpty()) {
             return false;

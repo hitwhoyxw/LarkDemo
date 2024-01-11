@@ -37,9 +37,10 @@ public class ConfigUtils {
         if (isModule) {
             sharedPreferences = context.getSharedPreferences(configName, Context.MODE_WORLD_READABLE);
         } else {
-            sharedPreferences = new XSharedPreferences(BuildConfig.APPLICATION_ID, configName);
+            xSharedPreferences = new XSharedPreferences(BuildConfig.APPLICATION_ID, configName);
         }
     }
+
 
     public XSharedPreferences getxSharedPreferences() {
         return xSharedPreferences != null ? xSharedPreferences : null;
@@ -47,6 +48,18 @@ public class ConfigUtils {
 
     public SharedPreferences getSharedPreferences() {
         return sharedPreferences != null ? sharedPreferences : null;
+    }
+
+    public void setOnSharedPreferenceChangeListener(XSharedPreferences.OnSharedPreferenceChangeListener listener) {
+        if (sharedPreferences != null) {
+            sharedPreferences.registerOnSharedPreferenceChangeListener(listener);
+        }
+    }
+
+    public void unSetOnSharedPreferenceChangeListener(SharedPreferences.OnSharedPreferenceChangeListener listener) {
+        if (sharedPreferences != null && listener != null) {
+            sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener);
+        }
     }
 
     public void saveConfig(ConfigObject configObject) {
