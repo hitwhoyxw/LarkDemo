@@ -19,6 +19,7 @@ import com.google.gson.JsonParser;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Random;
 
@@ -339,9 +340,22 @@ public class HookEntry implements IXposedHookLoadPackage {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     Activity activity = (Activity) param.thisObject;
-                    Bundle bundle = new Bundle(activity.getIntent().getExtras());
-                    LogUtil.PrintLog("bundle:" + new Gson().toJson(bundle), TAG);
-                    LogUtil.PrintStackTrace(0);
+                    Bundle bundle = activity.getIntent().getExtras();
+                    if (bundle != null && bundle.containsKey("key_info_data")) {
+                        Serializable key_info_data = bundle.getString("key_info_data");
+                        Class RedPacketInfoClass = findClass("com.ss.android.lark.money.redpacket.dto.RedPacketInfo", dexClassLoader);
+                        if (key_info_data != null && RedPacketInfoClass.isInstance(key_info_data)) {
+                            LogUtil.PrintLog("bundle:" + "key_info_data" + key_info_data.toString(), TAG);
+                        }
+                        if (bundle.containsKey("key_message_id")) {
+                            String key_message_id = bundle.getString("key_message_id");
+                            LogUtil.PrintLog("bundle:" + "key_message_id" + key_message_id, TAG);
+                        }
+                        if (bundle.containsKey("key_chat_id")) {
+                            String key_chat_id = bundle.getString("key_chat_id");
+                            LogUtil.PrintLog("bundle:" + "key_chat_id" + key_chat_id, TAG);
+                        }
+                    }
                 }
             });
         } catch (Exception e) {
