@@ -1,8 +1,10 @@
 package com.android.larkdemo.Hook;
 
 
+import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.os.Bundle;
 import android.util.Log;
 
 import com.android.larkdemo.Utils.ConfigObject;
@@ -21,6 +23,7 @@ import java.lang.reflect.Method;
 import java.util.Random;
 
 
+import dalvik.system.DexClassLoader;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XSharedPreferences;
@@ -39,6 +42,7 @@ public class HookEntry implements IXposedHookLoadPackage {
     public static String TAG = "Demo";
     private ConfigUtils configUtils;
     private static String finance_sdk_version = null;
+    private static DexClassLoader pluginDexClassLoader = null;
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
@@ -53,20 +57,27 @@ public class HookEntry implements IXposedHookLoadPackage {
                         XposedBridge.log("cannot get classloader return ");
                         return;
                     }
-                    initConfigSetting(null);
-                    hookConfigSetting(dexClassLoader);
-                    HookStackTrace(dexClassLoader);
+                    //initConfigSetting(null);
+                    //hookConfigSetting(dexClassLoader);
+                    //HookCancelListener();
+                    //HookStackTrace(dexClassLoader);
                     //HookSDKSender(dexClassLoader, false);
-                    HookMsg(dexClassLoader);
+                    //HookMsg(dexClassLoader);
+                    //HookOpenRedpacketView(dexClassLoader);
+                    HookPluginClassLoader(dexClassLoader);
                 }
             });
-            findAndHookMethod(Application.class, "onTerminate", new XC_MethodHook() {
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    LogUtil.PrintLog("onTerminate", TAG);
-                    configUtils.unSetOnSharedPreferenceChangeListener();
-                }
-            });
+
         }
+    }
+
+    public void HookCancelListener() {
+        findAndHookMethod(Application.class, "onTerminate", new XC_MethodHook() {
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                LogUtil.PrintLog("onTerminate", TAG);
+                configUtils.unSetOnSharedPreferenceChangeListener();
+            }
+        });
     }
 
     //通过hook初始化一些通过hook才能获取的配置
@@ -280,23 +291,63 @@ public class HookEntry implements IXposedHookLoadPackage {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        try {
+            //加载插件的classloader,
+            XposedHelpers.findAndHookConstructor("com.bytedance.mira.core.PluginClassLoader", dexClassLoader, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.ClassLoader.class, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    String str = (String) param.args[0];
+                    String str2 = (String) param.args[1];
+                    String str3 = (String) param.args[2];
+                    ClassLoader classLoader = (ClassLoader) param.args[3];
+                    LogUtil.PrintLog("PluginClassLoader str=" + str + " str2=" + str2 + " str3=" + str3 + " classLoader=" + classLoader, TAG);
+
+                    pluginDexClassLoader = (DexClassLoader) param.thisObject;
+                    HookOpenRedpacketView(pluginDexClassLoader);
+                }
+            });
+        } catch (Exception e) {
+            LogUtil.PrintLog("error occued in HookPluginClassLoader" + e.getMessage(), TAG);
+        }
     }
 
     public void HookMira(ClassLoader dexClassLoader) {
-//        Class MiraClass = dexClassLoader.loadClass("com.bytedance.mira.Mira");
-//        findAndHookMethod(MiraClass,
-//                "getPlugin", String.class, new XC_MethodHook() {
-//                    @Override
-//                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-//                        String pluginName = (String) param.args[0];
-//                        Object plugin = param.getResult();
-//                        if (plugin != null) {
-//                            String packageDir = (String) XposedHelpers.getObjectField(plugin, "mPackageDir");
-//                            // 在这里处理packageDir目录
-//                            LogUtil.PrintLog("getPlugin", "param:" + pluginName + " packageDir:" + packageDir);
-//                        }
-//                    }
-//                });
+        try {
+            Class MiraClass = dexClassLoader.loadClass("com.bytedance.mira.Mira");
+            findAndHookMethod(MiraClass,
+                    "getPlugin", String.class, new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            String pluginName = (String) param.args[0];
+                            Object plugin = param.getResult();
+                            if (plugin != null) {
+                                String packageDir = (String) XposedHelpers.getObjectField(plugin, "mPackageDir");
+                                // 在这里处理packageDir目录
+                                LogUtil.PrintLog("getPlugin", "param:" + pluginName + " packageDir:" + packageDir);
+                            }
+                        }
+                    });
+        } catch (Exception e) {
+            LogUtil.PrintLog("error occued in HookMira" + e.getMessage(), TAG);
+        }
+
+    }
+
+    public void HookOpenRedpacketView(ClassLoader dexClassLoader) {
+        try {
+            XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.detail.RedPacketDetailActivity", dexClassLoader, "x32_a", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    Activity activity = (Activity) param.thisObject;
+                    Bundle bundle = new Bundle(activity.getIntent().getExtras());
+                    LogUtil.PrintLog("bundle:" + new Gson().toJson(bundle), TAG);
+                    LogUtil.PrintStackTrace(0);
+                }
+            });
+        } catch (Exception e) {
+            LogUtil.PrintLog("error occued in HookOpenRedpacketView" + e.getMessage(), TAG);
+        }
+
     }
 
     public void HookStackTrace(ClassLoader dexClassLoader) {
