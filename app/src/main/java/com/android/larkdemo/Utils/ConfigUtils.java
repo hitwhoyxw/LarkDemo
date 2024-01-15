@@ -118,7 +118,8 @@ public class ConfigUtils {
                     sharedPreferences.getBoolean("isMuteEnable", false),
                     sharedPreferences.getFloat("delayTimeMin", 0f),
                     sharedPreferences.getFloat("daleyTimeMax", 0f),
-                    sharedPreferences.getString("muteKeyword", "")
+                    sharedPreferences.getString("muteKeyword", ""),
+                    sharedPreferences.getBoolean("fetchMode", false)
             );
         } catch (Exception e) {
             Log.i(TAG, "getConfigInModule: " + e.getMessage());
@@ -135,7 +136,8 @@ public class ConfigUtils {
                     xSharedPreferences.getBoolean("isMuteEnable", false),
                     xSharedPreferences.getFloat("delayTimeMin", 0f),
                     xSharedPreferences.getFloat("daleyTimeMax", 0f),
-                    xSharedPreferences.getString("muteKeyword", "")
+                    xSharedPreferences.getString("muteKeyword", ""),
+                    xSharedPreferences.getBoolean("fetchMode", false)
             );
         } catch (Exception e) {
             Log.i(TAG, "getConfigInApp: " + e.getMessage());

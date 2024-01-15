@@ -12,6 +12,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -32,6 +34,10 @@ public class MainActivity extends AppCompatActivity {
     EditText delayTimeMinEditText;
     EditText delayTimeMaxEditText;
     EditText muteKeywordEditText;
+    RadioButton rBtb_direct;
+    RadioButton rBtn_mock;
+
+    RadioGroup rBtnGroup;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +71,9 @@ public class MainActivity extends AppCompatActivity {
         delayTimeMinEditText = findViewById(R.id.editText_starttime);
         delayTimeMaxEditText = findViewById(R.id.editText_endtime);
         muteKeywordEditText = findViewById(R.id.editText_keyword);
+        rBtb_direct = findViewById(R.id.rBtn_direct);
+        rBtn_mock = findViewById(R.id.rBtn_mock);
+        rBtnGroup = findViewById(R.id.rBtnGroup);
     }
 
     public void setListeners() {
@@ -131,6 +140,13 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+        rBtnGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                configObject.fetchMode = checkedId == R.id.rBtn_direct;
+                saveAllConfig();
+            }
+        });
     }
 
     public void readAllConfig() {
@@ -145,6 +161,7 @@ public class MainActivity extends AppCompatActivity {
         delayTimeMinEditText.setText(String.valueOf(configObject.delayTimeMin));
         delayTimeMaxEditText.setText(String.valueOf(configObject.daleyTimeMax));
         muteKeywordEditText.setText(configObject.muteKeyword);
+        rBtnGroup.check(configObject.fetchMode ? R.id.rBtn_direct : R.id.rBtn_mock);
     }
 
     public void saveAllConfig() {

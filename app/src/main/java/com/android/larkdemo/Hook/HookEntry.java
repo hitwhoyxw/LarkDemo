@@ -4,6 +4,7 @@ package com.android.larkdemo.Hook;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -21,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Random;
 
 
@@ -58,14 +60,23 @@ public class HookEntry implements IXposedHookLoadPackage {
                         XposedBridge.log("cannot get classloader return ");
                         return;
                     }
-                    //initConfigSetting(null);
-                    //hookConfigSetting(dexClassLoader);
-                    //HookCancelListener();
-                    //HookStackTrace(dexClassLoader);
-                    //HookSDKSender(dexClassLoader, false);
-                    //HookMsg(dexClassLoader);
-                    //HookOpenRedpacketView(dexClassLoader);
-                    HookPluginClassLoader(dexClassLoader);
+                    initConfigSetting(null);
+                    ConfigObject configObject = configUtils.getConfig(false);
+                    if (configObject != null) {
+                        if (configObject.isMoudleEnable) {
+                            //直接
+                            if (configObject.fetchMode) {
+                                hookConfigSetting(dexClassLoader);
+                                HookMsg(dexClassLoader);
+                            }
+                            //构造接口
+                            else {
+                                HookOpenRedpacketView(dexClassLoader);
+                            }
+                        }
+                    }
+                    HookCancelListener();
+                    //HookPluginClassLoader(dexClassLoader);
                 }
             });
 
@@ -342,10 +353,28 @@ public class HookEntry implements IXposedHookLoadPackage {
                     Activity activity = (Activity) param.thisObject;
                     Bundle bundle = activity.getIntent().getExtras();
                     if (bundle != null && bundle.containsKey("key_info_data")) {
-                        Serializable key_info_data = bundle.getString("key_info_data");
+                        Object key_info_data = bundle.getString("key_info_data");
                         Class RedPacketInfoClass = findClass("com.ss.android.lark.money.redpacket.dto.RedPacketInfo", dexClassLoader);
-                        if (key_info_data != null && RedPacketInfoClass.isInstance(key_info_data)) {
-                            LogUtil.PrintLog("bundle:" + "key_info_data" + key_info_data.toString(), TAG);
+                        if (key_info_data != null) {
+                            LogUtil.PrintLog("bundle:" + "key_info_data classname" + key_info_data.getClass().getName(), TAG);
+                            try {
+                                boolean canGrab = (boolean) XposedHelpers.getObjectField(key_info_data, "canGrab");
+                                boolean isExpired = (boolean) XposedHelpers.getObjectField(key_info_data, "isExpired");
+                                boolean isFromMe = (boolean) XposedHelpers.getObjectField(key_info_data, "isFromMe");
+                                String redPacketId = (String) XposedHelpers.getObjectField(key_info_data, "redPacketId");
+                                String subject = (String) XposedHelpers.getObjectField(key_info_data, "subject");
+                                LogUtil.PrintLog("bundle:" + "key_info_data canGrab" + canGrab + " isExpired" + isExpired + " isFromMe" + isFromMe + " redPacketId" + redPacketId + " subject" + subject, TAG);
+                            } catch (NoSuchFieldError error) {
+                                LogUtil.PrintLog("bundle:" + "key_info_data canGrab NoSuchFieldError", TAG);
+                            }
+                        }
+                        if (bundle.containsKey("key_window_type")) {
+                            String key_window_type = bundle.getString("key_window_type");
+                            LogUtil.PrintLog("bundle:" + "key_window_type" + key_window_type, TAG);
+                        }
+                        if (bundle.containsKey("key_detail_data")) {
+                            String key_detail_data = bundle.getString("key_detail_data");
+                            LogUtil.PrintLog("bundle:" + "key_detail_data" + key_detail_data, TAG);
                         }
                         if (bundle.containsKey("key_message_id")) {
                             String key_message_id = bundle.getString("key_message_id");
@@ -362,6 +391,33 @@ public class HookEntry implements IXposedHookLoadPackage {
             LogUtil.PrintLog("error occued in HookOpenRedpacketView" + e.getMessage(), TAG);
         }
 
+        try {
+            Class RedPacketDetailActivityClass = findClass("com.ss.android.lark.money.redpacket.detail.RedPacketDetailActivity", dexClassLoader);
+            Method method = null;
+            for (Method m : RedPacketDetailActivityClass.getDeclaredMethods()) {
+                if (m.getName().equals("x32_a") && m.getReturnType() == Intent.class && m.getModifiers() == Modifier.PUBLIC + Modifier.STATIC) {
+                    method = m;
+                    LogUtil.PrintLog("find RedPacketDetailActivity.x32_a", "sdkSenderHook");
+                    break;
+                }
+            }
+            if (method == null) {
+                LogUtil.PrintLog("can not find RedPacketDetailActivity.public static Intent x32_a(Context context, String str, RedPacketInfo redPacketInfo) ", TAG);
+                return;
+            }
+            XposedBridge.hookMethod(method, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    Intent intent = (Intent) param.getResult();
+                    Context context = (Context) param.args[0];
+                    String str = (String) param.args[1];
+                    Object obj = param.args[2];
+                    LogUtil.PrintLog("x32_a intent:" + " context:" + context.toString() + " str:" + str + " obj:" + new Gson().toJson(obj), TAG);
+                }
+            });
+        } catch (Exception e) {
+            LogUtil.PrintLog("error occued in HookOpenRedpacketView" + e.getMessage(), TAG);
+        }
     }
 
     public void HookStackTrace(ClassLoader dexClassLoader) {

@@ -31,6 +31,27 @@
                     android:layout_height="wrap_content"
                     android:text="模块开关" />
 
+                <RadioGroup
+                    android:id="@+id/rBtnGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+
+                    <RadioButton
+                        android:id="@+id/rBtn_mock"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="模拟打开" />
+
+                    <RadioButton
+                        android:id="@+id/rBtn_direct"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="接口请求" />
+                </RadioGroup>
+
                 <Switch
                     android:id="@+id/switch_delay"
                     android:layout_width="match_parent"
