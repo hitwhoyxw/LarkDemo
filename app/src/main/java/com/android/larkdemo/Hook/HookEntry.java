@@ -62,24 +62,34 @@ public class HookEntry implements IXposedHookLoadPackage {
                     }
                     initConfigSetting(null);
                     ConfigObject configObject = configUtils.getConfig(false);
-                    if (configObject != null) {
-                        if (configObject.isMoudleEnable) {
-                            //直接
-                            if (configObject.fetchMode) {
-                                hookConfigSetting(dexClassLoader);
-                                HookMsg(dexClassLoader);
-                            }
-                            //构造接口
-                            else {
-                                HookOpenRedpacketView(dexClassLoader);
-                            }
-                        }
-                    }
+
+                    //hookConfigSetting(dexClassLoader);
+                    HookMsg(dexClassLoader);
+                    HookOpenRedpacket(dexClassLoader);
                     HookCancelListener();
-                    //HookPluginClassLoader(dexClassLoader);
                 }
             });
 
+        }
+    }
+
+    public void HookOpenRedpacket(ClassLoader dexClassLoader) {
+        try {
+            XposedHelpers.findAndHookMethod("com.ss.android.lark.money.MoneyModule", dexClassLoader, "openRedPacket", android.app.Activity.class, java.lang.String.class, java.lang.String.class, boolean.class, boolean.class, boolean.class, java.lang.String.class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    Activity activity = (Activity) param.args[0];
+                    String str = (String) param.args[1];
+                    String str2 = (String) param.args[2];
+                    boolean z = (boolean) param.args[3];
+                    boolean z2 = (boolean) param.args[4];
+                    boolean z3 = (boolean) param.args[5];
+                    String str3 = (String) param.args[6];
+                    LogUtil.PrintLog("openRedPacket activity:" + activity.toString() + " str:" + str + " str2:" + str2 + " z:" + z + " z2:" + z2 + " z3:" + z3 + " str3:" + str3, TAG);
+                }
+            });
+        } catch (Exception e) {
+            LogUtil.PrintLog("error occued in HookOpenRedpacket" + e.getMessage(), TAG);
         }
     }
 
@@ -98,64 +108,42 @@ public class HookEntry implements IXposedHookLoadPackage {
         Object ttcjPayUtilsInstantce = callStaticMethod(ttcjPayUtilsCls, "getInstance");
         finance_sdk_version = (String) callMethod(ttcjPayUtilsInstantce, "getSDKVersion");
     }
-//    public Method HookSDKSender(ClassLoader dexClassLoader, boolean getMethod) {
-//        try {
-//            //device_info{"finance_sdk_version":"6.8.8,"hongbao_type":"NORMAL","id":"xxx","is_return_name_auth":"true"}
-//            //Command.GRAB_HONGBAO=2401
-//            Class sdkSenderCls = findClass("com.ss.android.lark.sdk.SdkSender", dexClassLoader);
-//            String methodName = "asynSendRequestNonWrap";
-//            int paramCount = 4;
-//            if (sdkSenderCls != null) {
-//                Method[] methods = sdkSenderCls.getDeclaredMethods();
-//                for (Method m : methods) {
-//                    if (m.getName().equals(methodName) && m.getParameterCount() == paramCount) {
-//                        LogUtil.PrintLog("find sdkSender.asynSendRequestNonWrap", "sdkSenderHook");
-//                        if (getMethod) {
-//                            return m;
-//                        }
-//                        XposedBridge.hookMethod(m, new XC_MethodHook() {
-//                            @Override
-//                            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-//                                Object command = param.args[0];
-//                                Object msgBuilder = param.args[1];
-//                                String strCmd = new Gson().toJson(command);
-//                                String strMsg = new Gson().toJson(msgBuilder);
-//                                if (strCmd.contains("GRAB_HONGBAO")) {
-//                                    JsonParser parser = new JsonParser();
-//                                    JsonObject jsonObject = parser.parse(strMsg).getAsJsonObject();
-//                                    if (jsonObject.has("device_info")) {
-//                                        JsonObject device_info = jsonObject.get("device_info").getAsJsonObject();
-//                                        String version = device_info.get("finance_sdk_version").getAsString();
-//
-//                                        ConfigObject configObject = configUtils.getConfig();
-//                                        if (configObject == null) {
-//                                            return;
-//                                        }
-//                                        String configVersion = configObject.finance_sdk_version;
-//                                        if (HookUtils.compareVersions(version, configVersion) >= 0) {
-//                                            configVersion = version;
-//                                            configObject.finance_sdk_version = version;
-//                                            configUtils.saveConfig(configObject);
-//                                            LogUtil.PrintLog("update version finance_sdk_version=" + version, "sdkSenderHook");
-//                                        }
-//                                    }
-//                                }
-//                                LogUtil.PrintLog("command = " + strCmd, methodName);
-//                                LogUtil.PrintLog("msgBuilder = " + strMsg, methodName);
-//                                if (strCmd.contains("HONGBAO")) {
-//                                    //LogUtil.PrintStackTrace(0);
-//                                }
-//                            }
-//                        });
-//                        break;
-//                    }
-//                }
-//            }
-//        } catch (Exception e) {
-//            LogUtil.PrintLog(e.toString(), "asynSendRequestNonWrap");
-//        }
-//        return null;
-//    }
+
+    public Method HookSDKSender(ClassLoader dexClassLoader, boolean getMethod) {
+        try {
+            Class sdkSenderCls = findClass("com.ss.android.lark.sdk.SdkSender", dexClassLoader);
+            String methodName = "asynSendRequestNonWrap";
+            int paramCount = 4;
+            if (sdkSenderCls != null) {
+                Method[] methods = sdkSenderCls.getDeclaredMethods();
+                for (Method m : methods) {
+                    if (m.getName().equals(methodName) && m.getParameterCount() == paramCount) {
+                        LogUtil.PrintLog("find sdkSender.asynSendRequestNonWrap", "sdkSenderHook");
+                        if (getMethod) {
+                            return m;
+                        }
+                        XposedBridge.hookMethod(m, new XC_MethodHook() {
+                            @Override
+                            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                                Object command = param.args[0];
+                                Object msgBuilder = param.args[1];
+                                String strCmd = new Gson().toJson(command);
+                                String strMsg = new Gson().toJson(msgBuilder);
+                                if (strCmd.contains("HONGBAO")) {
+                                    LogUtil.PrintLog(methodName + new Gson().toJson(param.args), TAG);
+                                    LogUtil.PrintStackTrace(0);
+                                }
+                            }
+                        });
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LogUtil.PrintLog(e.toString(), "asynSendRequestNonWrap");
+        }
+        return null;
+    }
 
     public void HookMsg(ClassLoader dexClassLoader) {
         try {

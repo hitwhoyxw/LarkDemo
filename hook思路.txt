@@ -1,0 +1,141 @@
+
+"com.ss.android.lark.money.redpacket.detail.RedPacketDetailActivity"，查找这个类怎么加载的，发现有个activitylist中有这个成员
+XposedHelpers.findAndHookMethod("com.bytedance.mira.hook.b", classLoader, "a", java.lang.Class.class, new XC_MethodHook() {
+    @Override
+    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+        super.beforeHookedMethod(param);
+    }
+    @Override
+    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+        super.afterHookedMethod(param);
+    }
+});
+
+这个方法加载的RedPacketDetailActivity类
+mira插件管理，现在要分析从哪里加载的插件，从而知道如何实现
+
+这个方法安装的插件，有文件的参数，可以获得路径，并且需要清除数据才会重新安装
+  try{
+                        XposedHelpers.findAndHookMethod("com.bytedance.mira.plugin.b", dexClassLoader, "a", java.io.File.class, java.lang.String.class, int.class, java.lang.String.class, new XC_MethodHook() {
+                            @Override
+                            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                                File file=(File) param.args[0];
+                                String str=(String) param.args[1];
+                                int i=(int) param.args[2];
+                                String str2=(String) param.args[3];
+                                boolean b=(boolean) param.getResult();
+                                LogUtil.PrintLog("plugin file path "+file.getAbsolutePath()+" plugin name "+str+" plugin version"+i+" class name "+str2,"com.bytedance.mira.plugin.b.a");
+                            }
+                        });
+                    }catch (Exception e){
+                        e.printStackTrace();
+                    }
+}
+
+hook结果
+文件路径 /data/user/0/com.ss.lark/file/.patchs/auto_com.ss.android.lark.plugin.money_一个生成的16进制后缀.jar  
+插件名com.ss.android.lark.plugin.money 版本号70600050  classname没打印
+
+抢红包的接口
+XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.b.x32_a", classLoader, "x32_a", java.lang.String.class, java.lang.String.class, com.larksuite.framework.callback.IGetDataCallback<com.ss.android.lark.money.redpacket.dto.RedPacketGrabResponse>.class, new XC_MethodHook() {
+    @Override
+    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+        super.beforeHookedMethod(param);
+    }
+    @Override
+    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+        super.afterHookedMethod(param);
+    }
+});
+实现类
+  public void x32_a(String str, String str2, IGetDataCallback<RedPacketGrabResponse> iGetDataCallback) {
+        com.ss.android.lark.money.b.x32_a.x32_a.x32_b(true);
+        GrabHongbaoRequest.Builder device_info = new GrabHongbaoRequest.Builder().id(str).is_return_name_auth(true).hongbao_type(HongbaoType.NORMAL).device_info(new GrabHongbaoRequest.DeviceInfo.Builder().finance_sdk_version(com.ss.android.lark.money.impl.sdk.x32_a.x32_a()).build());
+        if (str2 != null) {
+            device_info.chat_id(Long.valueOf(Long.parseLong(str2)));
+        }
+        SdkSender.asynSendRequestNonWrap(Command.GRAB_HONGBAO, device_info, iGetDataCallback, new SdkSender.IParser() { // from class: com.ss.android.lark.money.redpacket.b.x32_c.5
+            /* renamed from: x32_a */
+            public RedPacketGrabResponse parse(byte[] bArr) throws IOException {
+                GrabHongbaoResponse grabHongbaoResponse = (GrabHongbaoResponse) GrabHongbaoResponse.ADAPTER.decode(bArr);
+                return new RedPacketGrabResponse(grabHongbaoResponse.amount.longValue(), grabHongbaoResponse.is_real_name_authed.booleanValue(), grabHongbaoResponse.auth_url);
+            }
+        });
+    }
+
+XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.b.x32_c", classLoader, "x32_a", java.lang.String.class, java.lang.String.class, com.larksuite.framework.callback.IGetDataCallback<com.ss.android.lark.money.redpacket.dto.RedPacketGrabResponse>.class, new XC_MethodHook() {
+    @Override
+    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+        super.beforeHookedMethod(param);
+    }
+    @Override
+    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+        super.afterHookedMethod(param);
+    }
+});
+现在有两个思路，hook sdksender，参数自己构造，直接request，优点，静态类，在apk中，直接能hook，缺点，参数需要自己构造，然后需要从hook方法中读取写入配置
+hook
+
+如果type:RED_PACKET 执行messageContent:{ redPacketId, subject}
+
+{"mMessage":{"cId":"7314203926440034306","characterLength":0,"chatId":"7190920523306582019","contentVersion":0,"cryptoToken":"","fileDeletedStatus":"NORMAL","fromChatterTenantId":"6950929971753779228","fromId":"7119710217251667970","id":"7314203939669442588","isAtAll":false,"isAtMe":false,"isFromMe":false,"isNotified":true,"isOtherAtMe":false,"isReEditable":false,"isRemoved":false,"isRestricted":false,"isStaticResourceMessageRecalled":false,"isVisible":true,"messageContent":{"canGrab":true,"cover":{"companyName":"","coverType":"UNKNOWN","id":0,"name":""},"isClicked":false,"isExpired":false,"isGrabbed":false,"isGrabbedFinish":false,"redPacketId":"7314203926440034306","subject":"恭喜发财，步步高升","totalNum":1,"type":"GROUP_RANDOM"},"originalSenderId":"","status":"NORMAL","type":"RED_PACKET"}
+
+redpackagedetailactivity.x32_a
+[ 2024-01-15T14:47:33.360    10726: 20993: 20993 I/LSPosed-Bridge  ] x32_a intent:key_info_data{"mClassLoader":{"packages":{"com.android.org.conscrypt":{"implTitle":"Unknown","implVendor":"Unknown","implVersion":"0.0","pkgName":"com.android.org.conscrypt","specTitle":"Unknown","specVendor":"Unknown","specVersion":"0.0"},"android.security.net.config":{"implTitle":"Unknown","implVendor":"Unknown","implVersion":"0.0","pkgName":"android.security.net.config","specTitle":"Unknown","specVendor":"Unknown","specVersion":"0.0"},"com.android.internal.telephony.dataconnection":{"implTitle":"Unknown","implVendor":"Unknown","implVersion":"0.0","pkgName":"com.android.internal.telephony.dataconnection","specTitle":"Unknown","specVendor":"Unknown","specVersion":"0.0"}},"proxyCache":{}},"mFlags":1536,"mMap":{"key_window_type":"dialog","key_message_id":"7324211642848641027","key_info_data":{"canGrab":true,"chatter":{"acceptSmsPhoneUrgent":true,"accessInfo":{"phoneCallAccessProfile":{"inaccessibleCode":"DEFAULT","isAccessible":true},"urgentAccessProfile":{"inaccessibleCode":"DEFAULT","isAccessible":true},"videoCallAccessProfile":{"inaccessibleCode":"DEFAULT","isAccessible":true},"voiceCallAccessProfile":{"inaccessibleCode":"DEFAULT","isAccessible":true}},"alias":"","anotherName":"","another_name":"","avatarKey":"v3_0055_ba60d3e1-2218-4ef7-9bd7-41e58aee20bg","avatarMedal":{"key":"","name":"","showSwitch":false},"avatarUrls":[],"canJoinGroup":false,"creatorId":"","customStatus":[],"description":{"description":"","type":"DEFAULT"},"enName":"Ou Yangxingwang","fullDepartmentName":"","id":"7119710217251667970","inContacts":false,"isAnonymous":false,"isCollaboration":false,"isCrossTenant":false,"isDefaultAvatar":false,"isFrozen":false,"isRegistered":true,"isSpecialFocus":false,"localizedName":"欧阳兴旺","name":"欧阳兴旺","namePinyin":"ouyangxingwang","namePy":"ouyangxingwang","nameWithAnotherName":"欧阳兴旺","openAppId":"","profileEnable":true,"status":0,"tagData":{"tagDataItems":[{"priority":0,"relationTagType" ...
+
+有点难搞，跳转页面的参数之一是通过请求回调回来的
+XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.b.x32_c", classLoader, "x32_a", java.lang.String.class, com.bytedance.lark.pb.im.v1.GetHongbaoInfoResponse.class, new XC_MethodHook() {
+    @Override
+    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+        super.beforeHookedMethod(param);
+    }
+    @Override
+    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+        super.afterHookedMethod(param);
+    }
+});
+
+通常请求会有两个callback，一个应该是protobuf的解析回调，把返回的数据解析成啥对象，然后另一个是等解析出来成功/失败之后执行的逻辑
+
+请求的下一步，把iparser和iGetDataCallback,封装成了a类
+Sdk.invokeAsync(command, bArr, str, new a(command, iParser, iGetDataCallback, str, z), streamDataSource, kVar);
+
+a类中的a方法，false时返回成功？c parseObject = SdkSender.parseObject(bArr, this.c, this.f132564b, this.f, true);解析，然后调用onsuccess或者onerror
+     @Override // com.bytedance.lark.sdk.c
+        public void a(boolean z, byte[] bArr) {
+            if (PatchProxy.proxy(new Object[]{new Byte(z ? (byte) 1 : (byte) 0), bArr}, this, f132563a, false, 303683).isSupported) {
+                return;
+            }
+            com.ss.android.lark.log.a.a.b(this.f);
+            if (z) {
+                ErrorResult translateAndHandlerLarkError = SdkSender.translateAndHandlerLarkError(this.f132564b, bArr, new RuntimeException(""));
+                IGetDataCallback<T> iGetDataCallback = this.d;
+                if (iGetDataCallback != null) {
+                    iGetDataCallback.onError(translateAndHandlerLarkError);
+                }
+            } else {
+                c parseObject = SdkSender.parseObject(bArr, this.c, this.f132564b, this.f, true);
+                if (this.d != null) {
+                    if (parseObject.f132566b != null) {
+                        this.d.onError(parseObject.f132566b);
+                    } else {
+                        this.d.onSuccess(parseObject.f132565a);
+                    }
+                }
+            }
+            com.ss.android.lark.log.a.a.d();
+        }
+点击红包会触发加载插件流程，回调成功触发openredpakcet，其中就会先请求数据》
+
+第三种思路，直接hook openRedpacket，已知问题，一开始不会初始化，得手动点击一次才会加载
+
+XposedHelpers.findAndHookMethod("com.ss.android.lark.money.MoneyModule", classLoader, "openRedPacket", android.app.Activity.class, java.lang.String.class, java.lang.String.class, boolean.class, boolean.class, boolean.class, java.lang.String.class, new XC_MethodHook() {
+    @Override
+    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+        super.beforeHookedMethod(param);
+    }
+    @Override
+    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+        super.afterHookedMethod(param);
+    }
+});
