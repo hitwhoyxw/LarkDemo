@@ -63,8 +63,9 @@ public class HookEntry implements IXposedHookLoadPackage {
                     initConfigSetting(null);
                     ConfigObject configObject = configUtils.getConfig(false);
 
-                    //hookConfigSetting(dexClassLoader);
-                    HookMsg(dexClassLoader);
+                    hookConfigSetting(dexClassLoader);
+                    TestHook(dexClassLoader);
+                    //HookMsg(dexClassLoader);
                     HookOpenRedpacket(dexClassLoader);
                     HookCancelListener();
                 }
@@ -73,19 +74,35 @@ public class HookEntry implements IXposedHookLoadPackage {
         }
     }
 
+    public void TestHook(ClassLoader dexClassLoader) {
+
+        Class entityClass = findClass("com.bytedance.lark.pb.basic.v1.Entity", dexClassLoader);
+        Class contentClass = findClass("com.bytedance.lark.pb.basic.v1.Content", dexClassLoader);
+        XposedHelpers.findAndHookMethod("com.ss.android.lark.parser.internal.p", dexClassLoader, "a", entityClass, contentClass, java.lang.String.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                Object redPacketContent = param.getResult();
+                LogUtil.PrintLog("redPacketContent:" + new Gson().toJson(redPacketContent), TAG);
+                
+            }
+        });
+    }
+
     public void HookOpenRedpacket(ClassLoader dexClassLoader) {
         try {
             XposedHelpers.findAndHookMethod("com.ss.android.lark.money.MoneyModule", dexClassLoader, "openRedPacket", android.app.Activity.class, java.lang.String.class, java.lang.String.class, boolean.class, boolean.class, boolean.class, java.lang.String.class, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    Activity activity = (Activity) param.args[0];
-                    String str = (String) param.args[1];
+                    Activity chatActivity = (Activity) param.args[0];
+                    String redPacketId = (String) param.args[1];
                     String str2 = (String) param.args[2];
-                    boolean z = (boolean) param.args[3];
+
+                    //isfromme
+                    boolean isFromMe = (boolean) param.args[3];
                     boolean z2 = (boolean) param.args[4];
                     boolean z3 = (boolean) param.args[5];
                     String str3 = (String) param.args[6];
-                    LogUtil.PrintLog("openRedPacket activity:" + activity.toString() + " str:" + str + " str2:" + str2 + " z:" + z + " z2:" + z2 + " z3:" + z3 + " str3:" + str3, TAG);
+                    LogUtil.PrintLog("openRedPacket activity:" + chatActivity.toString() + " redPacketId:" + redPacketId + " str2:" + str2 + " isFromMe:" + isFromMe + " z2:" + z2 + " z3:" + z3 + " str3:" + str3, TAG);
                 }
             });
         } catch (Exception e) {

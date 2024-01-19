@@ -139,3 +139,36 @@ XposedHelpers.findAndHookMethod("com.ss.android.lark.money.MoneyModule", classLo
         super.afterHookedMethod(param);
     }
 });
+第一个str参数是用于获取redpacketinfo的
+str用于获取redpacketinfo str2 str3
+z表示isfromme z1 z2
+com.ss.android.lark.b.a().z.a(RedPacketMessageCell.this.e, this.d.getRedPacketId(), this.e.af(), this.e.ah(), !this.d.isClicked(), this.f, RedPacketMessageCell.this.c.y());
+
+
+消息来源上层，这里实例化了redpacketcontent
+public static com.ss.android.lark.chat.export.entity.message.Content a(Entity entity, Content content, String str)
+XposedHelpers.findAndHookMethod("com.ss.android.lark.parser.internal.p", classLoader, "a", com.bytedance.lark.pb.basic.v1.Entity.class, com.bytedance.lark.pb.basic.v1.Content.class, java.lang.String.class, new XC_MethodHook() {
+    @Override
+    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+        super.beforeHookedMethod(param);
+    }
+    @Override
+    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+        super.afterHookedMethod(param);
+    }
+});
+更上一级，根据消息类型来解析消息
+public static Content a(Entity entity, com.ss.android.lark.chat.entity.message.Message message, com.bytedance.lark.pb.basic.v1.Content content, TranslateInfo translateInfo)
+XposedHelpers.findAndHookMethod("com.ss.android.lark.parser.internal.o", classLoader, "a", com.bytedance.lark.pb.basic.v1.Entity.class, com.ss.android.lark.chat.entity.message.Message.class, com.bytedance.lark.pb.basic.v1.Content.class, com.bytedance.lark.pb.basic.v1.TranslateInfo.class, new XC_MethodHook() {
+    @Override
+    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+        super.beforeHookedMethod(param);
+    }
+    @Override
+    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+        super.afterHookedMethod(param);
+    }
+});
+
+MessageParser com.ss.android.lark.biz.im.api.extension.d
+ThreadMessageVO类重写了 com.ss.android.lark.chat.export.vo.c的方法，可以分析下每个方法返回的值代表什么
