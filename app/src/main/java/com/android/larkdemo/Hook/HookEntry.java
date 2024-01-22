@@ -79,12 +79,14 @@ public class HookEntry implements IXposedHookLoadPackage {
         XposedHelpers.findAndHookMethod("com.ss.android.lark.parser.internal.p", dexClassLoader, "a", entityClass, contentClass, java.lang.String.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                String chatId = (String) param.args[2];
                 Object redPacketContent = param.getResult();
                 LogUtil.PrintLog("redPacketContent:" + redPacketContent.toString(), TAG);
-                fetchRedpacketByConfig(redPacketContent, configUtils.getConfig(false), dexClassLoader);
+                fetchRedpacketByConfig(redPacketContent, configUtils.getConfig(false), dexClassLoader, chatId);
             }
         });
     }
+
 
     public void HookOpenRedpacket(ClassLoader dexClassLoader) {
         try {
@@ -200,14 +202,14 @@ public class HookEntry implements IXposedHookLoadPackage {
                                         int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
                                         LogUtil.PrintLog("delay grab time = " + mSec, TAG);
                                         Thread.sleep(mSec);
-                                        CallRequestBuilder(dexClassLoader, redPacketId, finance_sdk_version, true, 1);
+                                        CallGrabRequestBuilder(dexClassLoader, redPacketId, finance_sdk_version, true, 1);
                                     } catch (InterruptedException e) {
                                         e.printStackTrace();
                                     }
                                 }
                             }).start();
                         } else {
-                            CallRequestBuilder(dexClassLoader, redPacketId, ConfigUtils.finance_sdk_version, ConfigUtils.is_return_name_auth, 1);
+                            CallGrabRequestBuilder(dexClassLoader, redPacketId, ConfigUtils.finance_sdk_version, ConfigUtils.is_return_name_auth, 1);
                         }
 
                     }
@@ -242,7 +244,7 @@ public class HookEntry implements IXposedHookLoadPackage {
         }
     }
 
-    public void CallRequestBuilder(ClassLoader dexClassLoader, String id, String finance_sdk_version, boolean is_return_name_auth, int hongbao_type) {
+    public void CallGrabRequestBuilder(ClassLoader dexClassLoader, String id, String finance_sdk_version, boolean is_return_name_auth, int hongbao_type) {
         try {
             Class<?> builderClass = findClass("com.bytedance.lark.pb.im.v1.GrabHongbaoRequest$Builder", dexClassLoader);
             Class<?> redPacketTypeClass = findClass("com.bytedance.lark.pb.im.v1.HongbaoType", dexClassLoader);
@@ -267,27 +269,49 @@ public class HookEntry implements IXposedHookLoadPackage {
             builderClass.getMethod("device_info", deviceInfoClass).invoke(builderInstance, deviceInfoInstance);
 
             //Object grabHongbaoRequestInstance = builderClass.getMethod("build").invoke(builderInstance);
-
             Class commandCls = findClass("com.bytedance.lark.pb.basic.v1.Command", dexClassLoader);
             Object objCmd = callStaticMethod(commandCls, "fromValue", 2401);
 
-            Class sdkSenderCls = findClass("com.ss.android.lark.sdk.SdkSender", dexClassLoader);
-            Method asynSendRequestNonWrapMethod = null;
-            for (Method m : sdkSenderCls.getDeclaredMethods()) {
-                if (m.getName().equals("asynSendRequestNonWrap") && m.getParameterCount() == 4) {
-                    LogUtil.PrintLog("find sdkSender.asynSendRequestNonWrap", "sdkSenderHook");
-                    asynSendRequestNonWrapMethod = m;
-                    break;
-                }
-            }
-            if (asynSendRequestNonWrapMethod == null) {
-                LogUtil.PrintLog("asynSendRequestNonWrapMethod is null", "sdkSenderHook");
-                return;
-            }
+            Method asynSendRequestNonWrapMethod = FindSdkSenderOfArgs(dexClassLoader, 4);
             asynSendRequestNonWrapMethod.invoke(null, objCmd, builderInstance, null, null);
         } catch (Exception e) {
-            LogUtil.PrintLog(e.toString(), "RequestBuilderHook");
+            LogUtil.PrintLog("error occued in CallGrabRequestBuilder" + e.getMessage(), TAG);
         }
+    }
+
+    public void CallUpdateRequest(ClassLoader dexClassLoader, String chatId, boolean type, boolean grabbed, boolean grabbed_finish, Boolean is_expired) {
+        try {
+            Class builderClass = findClass("com.bytedance.lark.pb.im.v1.UpdateHongbaoRequest$Builder", dexClassLoader);
+            Class<?> redPacketTypeClass = findClass("com.bytedance.lark.pb.im.v1.HongbaoType", dexClassLoader);
+            Class commandCls = findClass("com.bytedance.lark.pb.basic.v1.Command", dexClassLoader);
+            Object builderInstance = builderClass.newInstance();
+            builderClass.getMethod("id", String.class).invoke(builderInstance, chatId);
+            builderClass.getMethod("clicked", boolean.class).invoke(builderInstance, true);
+            builderClass.getMethod("grabbed", boolean.class).invoke(builderInstance, grabbed);
+            builderClass.getMethod("grabbed_finish", boolean.class).invoke(builderInstance, grabbed_finish);
+            builderClass.getMethod("is_expired", boolean.class).invoke(builderInstance, is_expired);
+            builderClass.getMethod("hongbao_type", redPacketTypeClass).invoke(builderInstance, callStaticMethod(redPacketTypeClass, "fromValue", 1));
+
+            Object objCmd = callStaticMethod(commandCls, "fromValue", 2402);
+            Method asynSendRequestNonWrapMethod = FindSdkSenderOfArgs(dexClassLoader, 4);
+            asynSendRequestNonWrapMethod.invoke(null, objCmd, builderInstance, null, null);
+        } catch (Exception e) {
+            LogUtil.PrintLog("error occued in CallUpdateRequest" + e.getMessage(), TAG);
+        }
+
+    }
+
+    public Method FindSdkSenderOfArgs(ClassLoader dexClassLoader, int paramCount) {
+        Class sdkSenderCls = findClass("com.ss.android.lark.sdk.SdkSender", dexClassLoader);
+        Method asynSendRequestNonWrapMethod = null;
+        for (Method m : sdkSenderCls.getDeclaredMethods()) {
+            if (m.getName().equals("asynSendRequestNonWrap") && m.getParameterCount() == paramCount) {
+                LogUtil.PrintLog("find sdkSender.asynSendRequestNonWrap", "sdkSenderHook");
+                asynSendRequestNonWrapMethod = m;
+                break;
+            }
+        }
+        return asynSendRequestNonWrapMethod;
     }
 
     public void HookPluginClassLoader(ClassLoader dexClassLoader) {
@@ -450,7 +474,7 @@ public class HookEntry implements IXposedHookLoadPackage {
 
     }
 
-    public boolean fetchRedpacketByConfig(Object redPacketContent, ConfigObject configObject, ClassLoader dexClassLoader) {
+    public boolean fetchRedpacketByConfig(Object redPacketContent, ConfigObject configObject, ClassLoader dexClassLoader, String chatId) {
         try {
             Field canGrab = redPacketContent.getClass().getDeclaredField("canGrab");
             canGrab.setAccessible(true);
@@ -486,25 +510,30 @@ public class HookEntry implements IXposedHookLoadPackage {
                 LogUtil.PrintLog("mute redpacket subject = " + subjectStr, TAG);
                 return false;
             }
-            if (configObject.isDelayEnable) {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            int delayTimeMin = Math.round(configObject.delayTimeMin * 1000);
-                            int daleyTimeMax = Math.round(configUtils.getConfig(false).daleyTimeMax * 1000);
-                            int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
-                            LogUtil.PrintLog("delay grab time = " + mSec, TAG);
-                            Thread.sleep(mSec);
-                            CallRequestBuilder(dexClassLoader, redPacketIdStr, finance_sdk_version, true, 1);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (!configObject.isDelayEnable) {
+                            CallGrabRequestBuilder(dexClassLoader, redPacketIdStr, finance_sdk_version, true, 1);
+                            Thread.sleep(500);
+                            CallUpdateRequest(dexClassLoader, chatId, true, true, true, false);
+                            return;
                         }
+                        int delayTimeMin = Math.round(configObject.delayTimeMin * 1000);
+                        int daleyTimeMax = Math.round(configUtils.getConfig(false).daleyTimeMax * 1000);
+                        int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
+                        LogUtil.PrintLog("delay grab time = " + mSec, TAG);
+                        Thread.sleep(mSec);
+                        CallGrabRequestBuilder(dexClassLoader, redPacketIdStr, finance_sdk_version, true, 1);
+                        Thread.sleep(500);
+                        CallUpdateRequest(dexClassLoader, chatId, true, true, true, false);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
                     }
-                }).start();
-            } else {
-                CallRequestBuilder(dexClassLoader, redPacketIdStr, finance_sdk_version, true, 1);
-            }
+                }
+            }).start();
+
             return true;
 
         } catch (IllegalAccessException e) {
@@ -514,7 +543,6 @@ public class HookEntry implements IXposedHookLoadPackage {
         }
         return true;
     }
-
     private void initConfigSetting(Context context) {
         try {
             configUtils = ConfigUtils.getInstance();
