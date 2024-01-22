@@ -21,6 +21,7 @@ import com.google.gson.JsonParser;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Random;
@@ -61,12 +62,9 @@ public class HookEntry implements IXposedHookLoadPackage {
                         return;
                     }
                     initConfigSetting(null);
-                    ConfigObject configObject = configUtils.getConfig(false);
-
                     hookConfigSetting(dexClassLoader);
-                    TestHook(dexClassLoader);
-                    //HookMsg(dexClassLoader);
-                    HookOpenRedpacket(dexClassLoader);
+                    RedpacketMsgHook(dexClassLoader);
+
                     HookCancelListener();
                 }
             });
@@ -74,7 +72,7 @@ public class HookEntry implements IXposedHookLoadPackage {
         }
     }
 
-    public void TestHook(ClassLoader dexClassLoader) {
+    public void RedpacketMsgHook(ClassLoader dexClassLoader) {
 
         Class entityClass = findClass("com.bytedance.lark.pb.basic.v1.Entity", dexClassLoader);
         Class contentClass = findClass("com.bytedance.lark.pb.basic.v1.Content", dexClassLoader);
@@ -82,8 +80,8 @@ public class HookEntry implements IXposedHookLoadPackage {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 Object redPacketContent = param.getResult();
-                LogUtil.PrintLog("redPacketContent:" + new Gson().toJson(redPacketContent), TAG);
-                
+                LogUtil.PrintLog("redPacketContent:" + redPacketContent.toString(), TAG);
+                fetchRedpacketByConfig(redPacketContent, configUtils.getConfig(false), dexClassLoader);
             }
         });
     }
@@ -124,6 +122,7 @@ public class HookEntry implements IXposedHookLoadPackage {
         Class ttcjPayUtilsCls = findClass("com.android.ttcjpaysdk.ttcjpayapi.TTCJPayUtils", dexClassLoader);
         Object ttcjPayUtilsInstantce = callStaticMethod(ttcjPayUtilsCls, "getInstance");
         finance_sdk_version = (String) callMethod(ttcjPayUtilsInstantce, "getSDKVersion");
+        LogUtil.PrintLog("finance_sdk_version = " + finance_sdk_version, TAG);
     }
 
     public Method HookSDKSender(ClassLoader dexClassLoader, boolean getMethod) {
@@ -449,6 +448,71 @@ public class HookEntry implements IXposedHookLoadPackage {
             LogUtil.PrintLog("error occued in HookStackTrace", "HookStackTrace");
         }
 
+    }
+
+    public boolean fetchRedpacketByConfig(Object redPacketContent, ConfigObject configObject, ClassLoader dexClassLoader) {
+        try {
+            Field canGrab = redPacketContent.getClass().getDeclaredField("canGrab");
+            canGrab.setAccessible(true);
+
+            Field isExpired = redPacketContent.getClass().getDeclaredField("isExpired");
+            isExpired.setAccessible(true);
+
+            Field isGrabbed = redPacketContent.getClass().getDeclaredField("isGrabbed");
+            isGrabbed.setAccessible(true);
+
+            Field redPacketId = redPacketContent.getClass().getDeclaredField("redPacketId");
+            redPacketId.setAccessible(true);
+
+            Field subject = redPacketContent.getClass().getDeclaredField("subject");
+            subject.setAccessible(true);
+
+            Field type = redPacketContent.getClass().getDeclaredField("type");
+            type.setAccessible(true);
+
+            if (!canGrab.getBoolean(redPacketContent) || isExpired.getBoolean(redPacketContent) || isGrabbed.getBoolean(redPacketContent)) {
+                LogUtil.PrintLog("invalid redPacketContent", TAG);
+                return false;
+            }
+            String redPacketIdStr = (String) redPacketId.get(redPacketContent);
+            String subjectStr = (String) subject.get(redPacketContent);
+
+
+            if (configObject == null || !configObject.isMoudleEnable) {
+                LogUtil.PrintLog("configObject is null or module deactived", TAG);
+                return false;
+            }
+            if (HookUtils.containMuteWord(subjectStr, configObject.muteKeyword) || HookUtils.containMuteWord(subjectStr, "挂|测|g")) {
+                LogUtil.PrintLog("mute redpacket subject = " + subjectStr, TAG);
+                return false;
+            }
+            if (configObject.isDelayEnable) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            int delayTimeMin = Math.round(configObject.delayTimeMin * 1000);
+                            int daleyTimeMax = Math.round(configUtils.getConfig(false).daleyTimeMax * 1000);
+                            int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
+                            LogUtil.PrintLog("delay grab time = " + mSec, TAG);
+                            Thread.sleep(mSec);
+                            CallRequestBuilder(dexClassLoader, redPacketIdStr, finance_sdk_version, true, 1);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }).start();
+            } else {
+                CallRequestBuilder(dexClassLoader, redPacketIdStr, finance_sdk_version, true, 1);
+            }
+            return true;
+
+        } catch (IllegalAccessException e) {
+            LogUtil.PrintLog("IllegalAccessException", TAG);
+        } catch (NoSuchFieldException e) {
+            LogUtil.PrintLog("NoSuchFieldException", TAG);
+        }
+        return true;
     }
 
     private void initConfigSetting(Context context) {
