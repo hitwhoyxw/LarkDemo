@@ -1,12 +1,15 @@
 package com.android.larkdemo.Hook;
 
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.ImageView;
 
 import com.android.larkdemo.Utils.ConfigObject;
 import com.android.larkdemo.Utils.ConfigUtils;
@@ -62,52 +65,29 @@ public class HookEntry implements IXposedHookLoadPackage {
                         return;
                     }
                     initConfigSetting(null);
-                    hookConfigSetting(dexClassLoader);
-                    RedpacketMsgHook(dexClassLoader);
-
                     HookCancelListener();
+                    ConfigObject configObject = configUtils.getConfig(false);
+                    if (configObject == null) {
+                        return;
+                    }
+                    if (configObject.fetchMode) {
+                        //mock fetch redpacket
+                    } else {
+                        hookConfigSetting(dexClassLoader);
+                        RedpacketMsgHook(dexClassLoader);
+                    }
+
                 }
             });
 
         }
     }
 
-    public void RedpacketMsgHook(ClassLoader dexClassLoader) {
-
-        Class entityClass = findClass("com.bytedance.lark.pb.basic.v1.Entity", dexClassLoader);
-        Class contentClass = findClass("com.bytedance.lark.pb.basic.v1.Content", dexClassLoader);
-        XposedHelpers.findAndHookMethod("com.ss.android.lark.parser.internal.p", dexClassLoader, "a", entityClass, contentClass, java.lang.String.class, new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                String chatId = (String) param.args[2];
-                Object redPacketContent = param.getResult();
-                LogUtil.PrintLog("redPacketContent:" + redPacketContent.toString(), TAG);
-                fetchRedpacketByConfig(redPacketContent, configUtils.getConfig(false), dexClassLoader, chatId);
-            }
-        });
-    }
-
-
-    public void HookOpenRedpacket(ClassLoader dexClassLoader) {
-        try {
-            XposedHelpers.findAndHookMethod("com.ss.android.lark.money.MoneyModule", dexClassLoader, "openRedPacket", android.app.Activity.class, java.lang.String.class, java.lang.String.class, boolean.class, boolean.class, boolean.class, java.lang.String.class, new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    Activity chatActivity = (Activity) param.args[0];
-                    String redPacketId = (String) param.args[1];
-                    String str2 = (String) param.args[2];
-
-                    //isfromme
-                    boolean isFromMe = (boolean) param.args[3];
-                    boolean z2 = (boolean) param.args[4];
-                    boolean z3 = (boolean) param.args[5];
-                    String str3 = (String) param.args[6];
-                    LogUtil.PrintLog("openRedPacket activity:" + chatActivity.toString() + " redPacketId:" + redPacketId + " str2:" + str2 + " isFromMe:" + isFromMe + " z2:" + z2 + " z3:" + z3 + " str3:" + str3, TAG);
-                }
-            });
-        } catch (Exception e) {
-            LogUtil.PrintLog("error occued in HookOpenRedpacket" + e.getMessage(), TAG);
-        }
+    public void hookConfigSetting(ClassLoader dexClassLoader) {
+        Class ttcjPayUtilsCls = findClass("com.android.ttcjpaysdk.ttcjpayapi.TTCJPayUtils", dexClassLoader);
+        Object ttcjPayUtilsInstantce = callStaticMethod(ttcjPayUtilsCls, "getInstance");
+        finance_sdk_version = (String) callMethod(ttcjPayUtilsInstantce, "getSDKVersion");
+        LogUtil.PrintLog("finance_sdk_version = " + finance_sdk_version, TAG);
     }
 
     public void HookCancelListener() {
@@ -119,12 +99,36 @@ public class HookEntry implements IXposedHookLoadPackage {
         });
     }
 
-    //通过hook初始化一些通过hook才能获取的配置
-    public void hookConfigSetting(ClassLoader dexClassLoader) {
-        Class ttcjPayUtilsCls = findClass("com.android.ttcjpaysdk.ttcjpayapi.TTCJPayUtils", dexClassLoader);
-        Object ttcjPayUtilsInstantce = callStaticMethod(ttcjPayUtilsCls, "getInstance");
-        finance_sdk_version = (String) callMethod(ttcjPayUtilsInstantce, "getSDKVersion");
-        LogUtil.PrintLog("finance_sdk_version = " + finance_sdk_version, TAG);
+    public void RedpacketMsgHook(ClassLoader dexClassLoader) {
+
+        Class entityClass = findClass("com.bytedance.lark.pb.basic.v1.Entity", dexClassLoader);
+        Class contentClass = findClass("com.bytedance.lark.pb.basic.v1.Content", dexClassLoader);
+        XposedHelpers.findAndHookMethod("com.ss.android.lark.parser.internal.p", dexClassLoader, "a", entityClass, contentClass, java.lang.String.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                String chatId = (String) param.args[2];
+                Object redPacketContent = param.getResult();
+                LogUtil.PrintLog("redPacketContent:" + HookUtils.getObjectString(redPacketContent), TAG);
+                fetchRedpacketByConfig(redPacketContent, configUtils.getConfig(false), dexClassLoader, chatId);
+            }
+        });
+    }
+
+
+    public void HookOpenRedpacket(ClassLoader dexClassLoader, boolean isFirst) {
+        //findAndHookMethod()
+        XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.detail.RedPacketDetailActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                Activity activity = (Activity) param.thisObject;
+                View view = activity.findViewById(android.R.id.content);
+                @SuppressLint("ResourceType") ImageView imageView = view.findViewById(11143);
+                if (imageView != null) {
+                    imageView.performClick();
+                }
+            }
+        });
+
     }
 
     public Method HookSDKSender(ClassLoader dexClassLoader, boolean getMethod) {
@@ -375,51 +379,6 @@ public class HookEntry implements IXposedHookLoadPackage {
 
     public void HookOpenRedpacketView(ClassLoader dexClassLoader) {
         try {
-            XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.detail.RedPacketDetailActivity", dexClassLoader, "x32_a", new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    Activity activity = (Activity) param.thisObject;
-                    Bundle bundle = activity.getIntent().getExtras();
-                    if (bundle != null && bundle.containsKey("key_info_data")) {
-                        Object key_info_data = bundle.getString("key_info_data");
-                        Class RedPacketInfoClass = findClass("com.ss.android.lark.money.redpacket.dto.RedPacketInfo", dexClassLoader);
-                        if (key_info_data != null) {
-                            LogUtil.PrintLog("bundle:" + "key_info_data classname" + key_info_data.getClass().getName(), TAG);
-                            try {
-                                boolean canGrab = (boolean) XposedHelpers.getObjectField(key_info_data, "canGrab");
-                                boolean isExpired = (boolean) XposedHelpers.getObjectField(key_info_data, "isExpired");
-                                boolean isFromMe = (boolean) XposedHelpers.getObjectField(key_info_data, "isFromMe");
-                                String redPacketId = (String) XposedHelpers.getObjectField(key_info_data, "redPacketId");
-                                String subject = (String) XposedHelpers.getObjectField(key_info_data, "subject");
-                                LogUtil.PrintLog("bundle:" + "key_info_data canGrab" + canGrab + " isExpired" + isExpired + " isFromMe" + isFromMe + " redPacketId" + redPacketId + " subject" + subject, TAG);
-                            } catch (NoSuchFieldError error) {
-                                LogUtil.PrintLog("bundle:" + "key_info_data canGrab NoSuchFieldError", TAG);
-                            }
-                        }
-                        if (bundle.containsKey("key_window_type")) {
-                            String key_window_type = bundle.getString("key_window_type");
-                            LogUtil.PrintLog("bundle:" + "key_window_type" + key_window_type, TAG);
-                        }
-                        if (bundle.containsKey("key_detail_data")) {
-                            String key_detail_data = bundle.getString("key_detail_data");
-                            LogUtil.PrintLog("bundle:" + "key_detail_data" + key_detail_data, TAG);
-                        }
-                        if (bundle.containsKey("key_message_id")) {
-                            String key_message_id = bundle.getString("key_message_id");
-                            LogUtil.PrintLog("bundle:" + "key_message_id" + key_message_id, TAG);
-                        }
-                        if (bundle.containsKey("key_chat_id")) {
-                            String key_chat_id = bundle.getString("key_chat_id");
-                            LogUtil.PrintLog("bundle:" + "key_chat_id" + key_chat_id, TAG);
-                        }
-                    }
-                }
-            });
-        } catch (Exception e) {
-            LogUtil.PrintLog("error occued in HookOpenRedpacketView" + e.getMessage(), TAG);
-        }
-
-        try {
             Class RedPacketDetailActivityClass = findClass("com.ss.android.lark.money.redpacket.detail.RedPacketDetailActivity", dexClassLoader);
             Method method = null;
             for (Method m : RedPacketDetailActivityClass.getDeclaredMethods()) {
@@ -495,7 +454,7 @@ public class HookEntry implements IXposedHookLoadPackage {
             type.setAccessible(true);
 
             if (!canGrab.getBoolean(redPacketContent) || isExpired.getBoolean(redPacketContent) || isGrabbed.getBoolean(redPacketContent)) {
-                LogUtil.PrintLog("invalid redPacketContent", TAG);
+                LogUtil.PrintLog("can not fetch redPacketContent", TAG);
                 return false;
             }
             String redPacketIdStr = (String) redPacketId.get(redPacketContent);
@@ -543,6 +502,7 @@ public class HookEntry implements IXposedHookLoadPackage {
         }
         return true;
     }
+
     private void initConfigSetting(Context context) {
         try {
             configUtils = ConfigUtils.getInstance();

@@ -7,6 +7,7 @@ import android.util.Log;
 
 import com.android.larkdemo.BuildConfig;
 import com.android.larkdemo.Utils.ConfigObject;
+import com.google.gson.Gson;
 
 import de.robv.android.xposed.XSharedPreferences;
 
@@ -144,4 +145,5 @@ public class ConfigUtils {
         }
         return configObject;
     }
+
 }

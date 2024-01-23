@@ -7,6 +7,7 @@ import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -19,7 +20,7 @@ import java.util.List;
 public class HookUtils {
     public static String XPOSED_HOOK_PACKAGE = "com.ss.android.lark";
     public static String XPOSED_HOOK_PACKAGE1 = "com.alibaba.android.rimet";
-
+    public static Gson gson = new Gson();
 
     public static String readConfig(String key) {
 //        try {
@@ -166,6 +167,10 @@ public class HookUtils {
 
         AlertDialog dialog = builder.create();
         dialog.show();
+    }
+
+    public static String getObjectString(Object object) {
+        return gson.toJson(object);
     }
 
 }
