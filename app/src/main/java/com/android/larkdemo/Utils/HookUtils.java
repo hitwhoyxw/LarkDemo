@@ -15,7 +15,9 @@ import com.hjq.permissions.OnPermissionCallback;
 import com.hjq.permissions.Permission;
 import com.hjq.permissions.XXPermissions;
 
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Random;
 
 public class HookUtils {
     public static String XPOSED_HOOK_PACKAGE = "com.ss.android.lark";
@@ -167,6 +169,77 @@ public class HookUtils {
 
         AlertDialog dialog = builder.create();
         dialog.show();
+    }
+
+    public static boolean isAvailableRedPacket(Object redPacketContent) {
+        try {
+            if (redPacketContent == null) {
+                LogUtil.PrintLog("redPacketContent is null", "larkDemo");
+                return false;
+            }
+            Field canGrab = redPacketContent.getClass().getDeclaredField("canGrab");
+            canGrab.setAccessible(true);
+
+            Field isExpired = redPacketContent.getClass().getDeclaredField("isExpired");
+            isExpired.setAccessible(true);
+
+            Field isGrabbed = redPacketContent.getClass().getDeclaredField("isGrabbed");
+            isGrabbed.setAccessible(true);
+
+            Field redPacketId = redPacketContent.getClass().getDeclaredField("redPacketId");
+            redPacketId.setAccessible(true);
+
+            Field type = redPacketContent.getClass().getDeclaredField("type");
+            type.setAccessible(true);
+
+            if (!canGrab.getBoolean(redPacketContent) || isExpired.getBoolean(redPacketContent) || isGrabbed.getBoolean(redPacketContent)) {
+                LogUtil.PrintLog("can not fetch redPacketContent", "larkDemo");
+                return false;
+            }
+        } catch (Exception e) {
+            LogUtil.PrintLog("isAvailableRedPacket error:" + e.getMessage(), "larkDemo");
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean canFetch(Object redPacketContent, ConfigObject configObject) {
+        if (redPacketContent == null) {
+            LogUtil.PrintLog("redPacketContent is null", "larkDemo");
+            return false;
+        }
+        if (!isAvailableRedPacket(redPacketContent)) {
+            return false;
+        }
+        try {
+            if (!configObject.isMoudleEnable) {
+                return false;
+            }
+            String muteWords = configObject.muteKeyword;
+            Field subject = redPacketContent.getClass().getDeclaredField("subject");
+            String subjectStr = subject.get(redPacketContent).toString();
+            subject.setAccessible(true);
+            if (configObject.isMuteEnable && (HookUtils.containMuteWord(subjectStr, muteWords) || HookUtils.containMuteWord(subjectStr, "挂|测|g"))) {
+                return false;
+            }
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+        return true;
+    }
+
+    public static int getRandDelayTime(ConfigObject configObject) {
+        int delayTimeMin = Math.round(configObject.delayTimeMin * 1000);
+        int daleyTimeMax = Math.round(configObject.daleyTimeMax * 1000);
+        if (delayTimeMin > daleyTimeMax) {
+            int temp = delayTimeMin;
+            delayTimeMin = daleyTimeMax;
+            daleyTimeMax = temp;
+        }
+        int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
+        return mSec;
     }
 
     public static String getObjectString(Object object) {

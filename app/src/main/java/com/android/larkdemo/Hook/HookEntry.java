@@ -116,7 +116,49 @@ public class HookEntry implements IXposedHookLoadPackage {
 
 
     public void HookOpenRedpacket(ClassLoader dexClassLoader, boolean isFirst) {
-        //findAndHookMethod()
+        Class viewHolderClass = findClass("com.ss.android.lark.chat.chatwindow.chat.message.cell.redpacket.RedPacketMessageCell$RedPacketMessageViewHolder", dexClassLoader);
+        Class voClass = findClass("com.ss.android.lark.chat.export.vo.c", dexClassLoader);
+        XposedHelpers.findAndHookMethod("com.ss.android.lark.chat.chatwindow.chat.message.cell.redpacket.RedPacketMessageCell", dexClassLoader, "a", viewHolderClass, voClass, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                try {
+                    Object viewHolder = param.args[0];
+                    Object cVar = param.args[1];
+                    Class cVarClass = cVar.getClass();
+                    Object al = cVarClass.getMethod("al").invoke(cVar);
+                    Object redpacketContent = al.getClass().getMethod("E").invoke(al);
+                    if (!HookUtils.isAvailableRedPacket(redpacketContent)) {
+                        return;
+                    }
+                    View view = (View) viewHolder.getClass().getMethod("a").invoke(viewHolder);
+                    if (view == null) {
+                        LogUtil.PrintLog("view is null", TAG);
+                        return;
+                    }
+                    Thread thread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                int mSec = 0;
+                                ConfigObject configObject = configUtils.getConfig(false);
+                                if (configObject.isDelayEnable) {
+                                    mSec = HookUtils.getRandDelayTime(configObject);
+                                    LogUtil.PrintLog("delay grab time = " + mSec, TAG);
+                                    Thread.sleep(mSec);
+                                }
+                                view.performClick();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                    thread.start();
+
+                } catch (Exception e) {
+                    LogUtil.PrintLog("error occued in HookOpenRedpacket" + e.getMessage(), TAG);
+                }
+            }
+        });
         XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.detail.RedPacketDetailActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -435,40 +477,18 @@ public class HookEntry implements IXposedHookLoadPackage {
 
     public boolean fetchRedpacketByConfig(Object redPacketContent, ConfigObject configObject, ClassLoader dexClassLoader, String chatId) {
         try {
-            Field canGrab = redPacketContent.getClass().getDeclaredField("canGrab");
-            canGrab.setAccessible(true);
-
-            Field isExpired = redPacketContent.getClass().getDeclaredField("isExpired");
-            isExpired.setAccessible(true);
-
-            Field isGrabbed = redPacketContent.getClass().getDeclaredField("isGrabbed");
-            isGrabbed.setAccessible(true);
 
             Field redPacketId = redPacketContent.getClass().getDeclaredField("redPacketId");
             redPacketId.setAccessible(true);
 
-            Field subject = redPacketContent.getClass().getDeclaredField("subject");
-            subject.setAccessible(true);
-
             Field type = redPacketContent.getClass().getDeclaredField("type");
             type.setAccessible(true);
 
-            if (!canGrab.getBoolean(redPacketContent) || isExpired.getBoolean(redPacketContent) || isGrabbed.getBoolean(redPacketContent)) {
+            if (!HookUtils.canFetch(redPacketContent, configObject)) {
                 LogUtil.PrintLog("can not fetch redPacketContent", TAG);
                 return false;
             }
             String redPacketIdStr = (String) redPacketId.get(redPacketContent);
-            String subjectStr = (String) subject.get(redPacketContent);
-
-
-            if (configObject == null || !configObject.isMoudleEnable) {
-                LogUtil.PrintLog("configObject is null or module deactived", TAG);
-                return false;
-            }
-            if (HookUtils.containMuteWord(subjectStr, configObject.muteKeyword) || HookUtils.containMuteWord(subjectStr, "挂|测|g")) {
-                LogUtil.PrintLog("mute redpacket subject = " + subjectStr, TAG);
-                return false;
-            }
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -479,9 +499,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                             CallUpdateRequest(dexClassLoader, chatId, true, true, true, false);
                             return;
                         }
-                        int delayTimeMin = Math.round(configObject.delayTimeMin * 1000);
-                        int daleyTimeMax = Math.round(configUtils.getConfig(false).daleyTimeMax * 1000);
-                        int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
+                        int mSec = HookUtils.getRandDelayTime(configObject);
                         LogUtil.PrintLog("delay grab time = " + mSec, TAG);
                         Thread.sleep(mSec);
                         CallGrabRequestBuilder(dexClassLoader, redPacketIdStr, finance_sdk_version, true, 1);
