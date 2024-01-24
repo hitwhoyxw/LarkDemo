@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Random;
@@ -51,6 +52,8 @@ public class HookEntry implements IXposedHookLoadPackage {
     private static String finance_sdk_version = null;
     private static DexClassLoader pluginDexClassLoader = null;
 
+    private boolean isOpenByModule = false;
+
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (loadPackageParam.packageName.equals(HookUtils.XPOSED_HOOK_PACKAGE)) {
@@ -67,11 +70,12 @@ public class HookEntry implements IXposedHookLoadPackage {
                     initConfigSetting(null);
                     HookCancelListener();
                     ConfigObject configObject = configUtils.getConfig(false);
-                    if (configObject == null) {
+                    if (configObject == null || !configObject.isMoudleEnable) {
+                        LogUtil.PrintLog("configObject is null or moudle is disable", TAG);
                         return;
                     }
                     if (configObject.fetchMode) {
-                        //mock fetch redpacket
+
                     } else {
                         hookConfigSetting(dexClassLoader);
                         RedpacketMsgHook(dexClassLoader);
@@ -115,7 +119,7 @@ public class HookEntry implements IXposedHookLoadPackage {
     }
 
 
-    public void HookOpenRedpacket(ClassLoader dexClassLoader, boolean isFirst) {
+    public void HookOpenRedpacket(ClassLoader dexClassLoader) {
         Class viewHolderClass = findClass("com.ss.android.lark.chat.chatwindow.chat.message.cell.redpacket.RedPacketMessageCell$RedPacketMessageViewHolder", dexClassLoader);
         Class voClass = findClass("com.ss.android.lark.chat.export.vo.c", dexClassLoader);
         XposedHelpers.findAndHookMethod("com.ss.android.lark.chat.chatwindow.chat.message.cell.redpacket.RedPacketMessageCell", dexClassLoader, "a", viewHolderClass, voClass, new XC_MethodHook() {
@@ -128,49 +132,101 @@ public class HookEntry implements IXposedHookLoadPackage {
                     Object al = cVarClass.getMethod("al").invoke(cVar);
                     Object redpacketContent = al.getClass().getMethod("E").invoke(al);
                     if (!HookUtils.isAvailableRedPacket(redpacketContent)) {
+                        LogUtil.PrintLog("HookOpenRedpacket not available redPacketContent", TAG);
                         return;
                     }
                     View view = (View) viewHolder.getClass().getMethod("a").invoke(viewHolder);
                     if (view == null) {
-                        LogUtil.PrintLog("view is null", TAG);
+                        LogUtil.PrintLog("HookOpenRedpacket view is null", TAG);
                         return;
                     }
-                    Thread thread = new Thread(new Runnable() {
+                    int mSec = 0;
+                    ConfigObject configObject = configUtils.getConfig(false);
+                    if (configObject.isDelayEnable) {
+                        mSec = HookUtils.getRandDelayTime(configObject);
+                        LogUtil.PrintLog("delay grab time = " + mSec, TAG);
+                    }
+                    view.postDelayed(new Runnable() {
                         @Override
                         public void run() {
                             try {
-                                int mSec = 0;
-                                ConfigObject configObject = configUtils.getConfig(false);
-                                if (configObject.isDelayEnable) {
-                                    mSec = HookUtils.getRandDelayTime(configObject);
-                                    LogUtil.PrintLog("delay grab time = " + mSec, TAG);
-                                    Thread.sleep(mSec);
-                                }
                                 view.performClick();
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
+                            } catch (Exception e) {
+                                LogUtil.PrintLog("error occued in HookOpenRedpacket" + e.getMessage(), TAG);
                             }
                         }
-                    });
-                    thread.start();
+                    }, mSec);
 
+                } catch (Exception e) {
+                    LogUtil.PrintLog("error occued in HookOpenRedpacket" + e.getMessage(), TAG);
+                }
+                isOpenByModule = true;
+            }
+        });
+        XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.detail.RedPacketDetailActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                try {
+                    Object activity = param.thisObject;
+                    View view = ((Activity) activity).findViewById(android.R.id.content);
+                    @SuppressLint("ResourceType") ImageView imageView = view.findViewById(11143);
+                    if (imageView == null) {
+                        return;
+                    }
+                    //延迟点击open，判断是否可见
+                    if (imageView.getVisibility() == View.VISIBLE) {
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    Thread.sleep(50);
+                                    ((Activity) activity).runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            imageView.performClick();
+                                        }
+                                    });
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }).start();
+                    }
+                    //如果不可见，如果是手动打开，不管，否则，关闭activity
+                    else {
+                        if (isOpenByModule) {
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        Thread.sleep(50);
+                                        ((Activity) activity).runOnUiThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                try {
+                                                    activity.getClass().getMethod("finish").invoke(activity);
+                                                } catch (IllegalAccessException e) {
+                                                    e.printStackTrace();
+                                                } catch (InvocationTargetException e) {
+                                                    e.printStackTrace();
+                                                } catch (NoSuchMethodException e) {
+                                                    e.printStackTrace();
+                                                }
+                                                isOpenByModule = false;
+                                            }
+                                        });
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }).start();
+                        }
+                    }
                 } catch (Exception e) {
                     LogUtil.PrintLog("error occued in HookOpenRedpacket" + e.getMessage(), TAG);
                 }
             }
         });
-        XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.detail.RedPacketDetailActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                Activity activity = (Activity) param.thisObject;
-                View view = activity.findViewById(android.R.id.content);
-                @SuppressLint("ResourceType") ImageView imageView = view.findViewById(11143);
-                if (imageView != null) {
-                    imageView.performClick();
-                }
-            }
-        });
-
     }
 
     public Method HookSDKSender(ClassLoader dexClassLoader, boolean getMethod) {
@@ -290,7 +346,8 @@ public class HookEntry implements IXposedHookLoadPackage {
         }
     }
 
-    public void CallGrabRequestBuilder(ClassLoader dexClassLoader, String id, String finance_sdk_version, boolean is_return_name_auth, int hongbao_type) {
+    public void CallGrabRequestBuilder(ClassLoader dexClassLoader, String id, String
+            finance_sdk_version, boolean is_return_name_auth, int hongbao_type) {
         try {
             Class<?> builderClass = findClass("com.bytedance.lark.pb.im.v1.GrabHongbaoRequest$Builder", dexClassLoader);
             Class<?> redPacketTypeClass = findClass("com.bytedance.lark.pb.im.v1.HongbaoType", dexClassLoader);
@@ -325,7 +382,8 @@ public class HookEntry implements IXposedHookLoadPackage {
         }
     }
 
-    public void CallUpdateRequest(ClassLoader dexClassLoader, String chatId, boolean type, boolean grabbed, boolean grabbed_finish, Boolean is_expired) {
+    public void CallUpdateRequest(ClassLoader dexClassLoader, String chatId, boolean type,
+                                  boolean grabbed, boolean grabbed_finish, Boolean is_expired) {
         try {
             Class builderClass = findClass("com.bytedance.lark.pb.im.v1.UpdateHongbaoRequest$Builder", dexClassLoader);
             Class<?> redPacketTypeClass = findClass("com.bytedance.lark.pb.im.v1.HongbaoType", dexClassLoader);
@@ -475,7 +533,8 @@ public class HookEntry implements IXposedHookLoadPackage {
 
     }
 
-    public boolean fetchRedpacketByConfig(Object redPacketContent, ConfigObject configObject, ClassLoader dexClassLoader, String chatId) {
+    public boolean fetchRedpacketByConfig(Object redPacketContent, ConfigObject
+            configObject, ClassLoader dexClassLoader, String chatId) {
         try {
 
             Field redPacketId = redPacketContent.getClass().getDeclaredField("redPacketId");
