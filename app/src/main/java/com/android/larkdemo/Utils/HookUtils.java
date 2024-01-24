@@ -217,8 +217,8 @@ public class HookUtils {
             }
             String muteWords = configObject.muteKeyword;
             Field subject = redPacketContent.getClass().getDeclaredField("subject");
-            String subjectStr = subject.get(redPacketContent).toString();
             subject.setAccessible(true);
+            String subjectStr = subject.get(redPacketContent).toString();
             if (configObject.isMuteEnable && (HookUtils.containMuteWord(subjectStr, muteWords) || HookUtils.containMuteWord(subjectStr, "挂|测|g"))) {
                 return false;
             }

@@ -75,12 +75,12 @@ public class HookEntry implements IXposedHookLoadPackage {
                         return;
                     }
                     if (configObject.fetchMode) {
-
-                    } else {
                         hookConfigSetting(dexClassLoader);
                         RedpacketMsgHook(dexClassLoader);
+                    } else {
+                        HookOpenRedpacket(dexClassLoader);
                     }
-
+                    LogUtil.PrintLog("HookEntry handleLoadPackage currentMode " + (configObject.fetchMode ? "直接请求" : "模拟点击"), TAG);
                 }
             });
 
@@ -171,6 +171,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                     View view = ((Activity) activity).findViewById(android.R.id.content);
                     @SuppressLint("ResourceType") ImageView imageView = view.findViewById(11143);
                     if (imageView == null) {
+                        LogUtil.PrintLog("HookOpenRedpacket imageView is null", TAG);
                         return;
                     }
                     //延迟点击open，判断是否可见
