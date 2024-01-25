@@ -104,6 +104,26 @@
                     android:hint="例如挂|g"
                     android:inputType="text" />
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btn_save"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="保存配置" />
+
+                    <Button
+                        android:id="@+id/btn_cancel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="取消修改" />
+                </LinearLayout>
+
             </LinearLayout>
         </ScrollView>
 

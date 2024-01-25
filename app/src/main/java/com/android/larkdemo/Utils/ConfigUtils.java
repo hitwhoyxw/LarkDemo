@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.android.larkdemo.BuildConfig;
 import com.android.larkdemo.Utils.ConfigObject;
@@ -63,6 +64,7 @@ public class ConfigUtils {
             listener = new XSharedPreferences.OnSharedPreferenceChangeListener() {
                 @Override
                 public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+                    LogUtil.PrintLog("onSharedPreferenceChanged", TAG);
                     xSharedPreferences.reload();
                 }
             };
@@ -95,7 +97,8 @@ public class ConfigUtils {
             editor.putFloat("delayTimeMin", configObject.delayTimeMin);
             editor.putFloat("daleyTimeMax", configObject.daleyTimeMax);
             editor.putString("muteKeyword", configObject.muteKeyword);
-            editor.commit();
+            editor.putBoolean("fetchMode", configObject.fetchMode);
+            editor.apply();
         } catch (Exception e) {
             Log.i(TAG, "saveConfig: " + e.getMessage());
         }

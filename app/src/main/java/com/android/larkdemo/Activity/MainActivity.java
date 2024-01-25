@@ -10,6 +10,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.RadioButton;
@@ -36,8 +37,11 @@ public class MainActivity extends AppCompatActivity {
     EditText muteKeywordEditText;
     RadioButton rBtb_direct;
     RadioButton rBtn_mock;
-
     RadioGroup rBtnGroup;
+
+    Button btn_save;
+
+    Button btn_cancel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,12 +52,7 @@ public class MainActivity extends AppCompatActivity {
         findAllView();
         readAllConfig();
         setListeners();
-//        HookUtils.requestPemission(this, new MyCallback() {
-//            @Override
-//            public void onCallback() {
-//                System.exit(0);
-//            }
-//        });
+
     }
 
 
@@ -74,77 +73,22 @@ public class MainActivity extends AppCompatActivity {
         rBtb_direct = findViewById(R.id.rBtn_direct);
         rBtn_mock = findViewById(R.id.rBtn_mock);
         rBtnGroup = findViewById(R.id.rBtnGroup);
+        rBtnGroup.clearCheck();
+        btn_save = findViewById(R.id.btn_save);
+        btn_cancel = findViewById(R.id.btn_cancel);
     }
 
     public void setListeners() {
-        moudleSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        btn_save.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                configObject.isMoudleEnable = isChecked;
+            public void onClick(View v) {
                 saveAllConfig();
             }
         });
-        delaySwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        btn_cancel.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                configObject.isDelayEnable = isChecked;
-                saveAllConfig();
-            }
-        });
-        muteSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                configObject.isMuteEnable = isChecked;
-                saveAllConfig();
-            }
-        });
-        delayTimeMinEditText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (hasFocus) {
-                    return;
-                }
-                try {
-                    configObject.delayTimeMin = Float.parseFloat(delayTimeMinEditText.getText().toString());
-                    saveAllConfig();
-                } catch (ClassCastException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        delayTimeMaxEditText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (hasFocus) {
-                    return;
-                }
-                try {
-                    configObject.daleyTimeMax = Float.parseFloat(delayTimeMaxEditText.getText().toString());
-                    saveAllConfig();
-                } catch (ClassCastException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        muteKeywordEditText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (hasFocus) {
-                    return;
-                }
-                try {
-                    configObject.muteKeyword = muteKeywordEditText.getText().toString();
-                    saveAllConfig();
-                } catch (ClassCastException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        rBtnGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(RadioGroup group, int checkedId) {
-                configObject.fetchMode = checkedId == R.id.rBtn_direct;
-                saveAllConfig();
+            public void onClick(View v) {
+                readAllConfig();
             }
         });
     }
@@ -161,12 +105,21 @@ public class MainActivity extends AppCompatActivity {
         delayTimeMinEditText.setText(String.valueOf(configObject.delayTimeMin));
         delayTimeMaxEditText.setText(String.valueOf(configObject.daleyTimeMax));
         muteKeywordEditText.setText(configObject.muteKeyword);
-        rBtnGroup.check(configObject.fetchMode ? R.id.rBtn_direct : R.id.rBtn_mock);
+        rBtnGroup.check(!configObject.fetchMode ? R.id.rBtn_mock : R.id.rBtn_direct);
     }
 
     public void saveAllConfig() {
         try {
-            configUtils.saveConfig(configObject);
+            ConfigObject object = new ConfigObject(
+                    moudleSwitch.isChecked(),
+                    delaySwitch.isChecked(),
+                    muteSwitch.isChecked(),
+                    Float.parseFloat(delayTimeMinEditText.getText().toString()),
+                    Float.parseFloat(delayTimeMaxEditText.getText().toString()),
+                    muteKeywordEditText.getText().toString(),
+                    rBtnGroup.getCheckedRadioButtonId() == R.id.rBtn_direct
+            );
+            configUtils.saveConfig(object);
         } catch (NullPointerException e) {
             Log.i(TAG, "saveAllConfig" + e.getMessage());
         }
