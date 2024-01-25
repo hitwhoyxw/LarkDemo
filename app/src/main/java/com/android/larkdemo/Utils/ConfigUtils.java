@@ -69,22 +69,22 @@ public class ConfigUtils {
                 }
             };
         }
-        if (sharedPreferences != null) {
+        if (xSharedPreferences != null) {
             LogUtil.PrintLog("setOnSharedPreferenceChangeListener", TAG);
-            sharedPreferences.registerOnSharedPreferenceChangeListener(listener);
+            xSharedPreferences.registerOnSharedPreferenceChangeListener(listener);
         }
     }
 
     public void unSetOnSharedPreferenceChangeListener(SharedPreferences.OnSharedPreferenceChangeListener listener) {
-        if (sharedPreferences != null && listener != null) {
-            sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener);
+        if (xSharedPreferences != null && listener != null) {
+            xSharedPreferences.unregisterOnSharedPreferenceChangeListener(listener);
         }
     }
 
     public void unSetOnSharedPreferenceChangeListener() {
-        if (sharedPreferences != null && listener != null) {
+        if (xSharedPreferences != null && listener != null) {
             LogUtil.PrintLog("unSetOnSharedPreferenceChangeListener", TAG);
-            sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener);
+            xSharedPreferences.unregisterOnSharedPreferenceChangeListener(listener);
         }
     }
 
