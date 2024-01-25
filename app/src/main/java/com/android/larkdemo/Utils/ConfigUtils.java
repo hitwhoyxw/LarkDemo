@@ -65,7 +65,7 @@ public class ConfigUtils {
                 @Override
                 public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
                     LogUtil.PrintLog("onSharedPreferenceChanged", TAG);
-                    xSharedPreferences.reload();
+                    ((XSharedPreferences) sharedPreferences).reload();
                 }
             };
         }
