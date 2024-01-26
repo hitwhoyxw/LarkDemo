@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -41,6 +42,7 @@ import static de.robv.android.xposed.XposedHelpers.callStaticMethod;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
 import static de.robv.android.xposed.XposedHelpers.findMethodBestMatch;
+import static java.lang.Thread.sleep;
 
 public class HookEntry implements IXposedHookLoadPackage {
     public static String TAG = "Demo";
@@ -170,12 +172,15 @@ public class HookEntry implements IXposedHookLoadPackage {
                 try {
                     Object view = param.thisObject;
                     Field mDialogOpenIV = view.getClass().getDeclaredField("mDialogOpenIV");
+                    Field mCloseTitleIV = view.getClass().getDeclaredField("mCloseTitleIV");
                     if (mDialogOpenIV == null) {
                         LogUtil.PrintLog("mDialogOpenIV is null", TAG);
                         return;
                     }
+                    mCloseTitleIV.setAccessible(true);
                     mDialogOpenIV.setAccessible(true);
                     ImageView imageView = (ImageView) mDialogOpenIV.get(view);
+                    ImageView closeTitleIV = (ImageView) mCloseTitleIV.get(view);
                     if (imageView == null) {
                         LogUtil.PrintLog("imageView is null", TAG);
                         return;
@@ -188,6 +193,8 @@ public class HookEntry implements IXposedHookLoadPackage {
                                 return;
                             }
                             imageView.performClick();
+                            
+                            LogUtil.PrintLog("finish a task success", TAG);
                             if (isOpenByModule.get()) {
                                 LogUtil.PrintLog("finish a task success", TAG);
                                 isOpenByModule.set(false);
@@ -207,6 +214,7 @@ public class HookEntry implements IXposedHookLoadPackage {
 
             }
         });
+
     }
 
     public Method HookSDKSender(ClassLoader dexClassLoader, boolean getMethod) {
@@ -283,7 +291,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                                         int daleyTimeMax = Math.round(configObject.daleyTimeMax * 1000);
                                         int mSec = new Random().nextInt(daleyTimeMax - delayTimeMin + 1) + delayTimeMin;
                                         LogUtil.PrintLog("delay grab time = " + mSec, TAG);
-                                        Thread.sleep(mSec);
+                                        sleep(mSec);
                                         CallGrabRequestBuilder(dexClassLoader, redPacketId, finance_sdk_version, true, 1);
                                     } catch (InterruptedException e) {
                                         e.printStackTrace();
@@ -534,15 +542,15 @@ public class HookEntry implements IXposedHookLoadPackage {
                     try {
                         if (!configObject.isDelayEnable) {
                             CallGrabRequestBuilder(dexClassLoader, redPacketIdStr, finance_sdk_version, true, 1);
-                            Thread.sleep(500);
+                            sleep(500);
                             CallUpdateRequest(dexClassLoader, chatId, true, true, true, false);
                             return;
                         }
                         int mSec = HookUtils.getRandDelayTime(configObject);
                         LogUtil.PrintLog("delay grab time = " + mSec, TAG);
-                        Thread.sleep(mSec);
+                        sleep(mSec);
                         CallGrabRequestBuilder(dexClassLoader, redPacketIdStr, finance_sdk_version, true, 1);
-                        Thread.sleep(500);
+                        sleep(500);
                         CallUpdateRequest(dexClassLoader, chatId, true, true, true, false);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
