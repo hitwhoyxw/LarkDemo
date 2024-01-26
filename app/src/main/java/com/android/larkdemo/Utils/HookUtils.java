@@ -117,60 +117,6 @@ public class HookUtils {
         }
     }
 
-    public static void requestPemission(Context context, MyCallback myCallback) {
-        if (XXPermissions.isGranted(context, Permission.MANAGE_EXTERNAL_STORAGE)) {
-            return;
-        }
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle("权限请求");
-        builder.setMessage("模块的配置文件读写需要授予外部存储读写权限，是否授予该应用权限？无权限无法工作");
-
-        builder.setPositiveButton("授予", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                // 在此处添加授予权限的逻辑
-                XXPermissions.with(context)
-                        .permission(Permission.MANAGE_EXTERNAL_STORAGE)
-                        .request(new OnPermissionCallback() {
-                            @Override
-                            public void onGranted(List<String> permissions, boolean allGranted) {
-                                if (allGranted) {
-                                    if (myCallback != null) {
-                                        myCallback.onCallback();
-                                    }
-                                    Toast.makeText(context, "已授予外部存储读写权限", Toast.LENGTH_SHORT).show();
-                                } else {
-                                    Toast.makeText(context, "授予部分权限成功，可能会影响部分功能的使用", Toast.LENGTH_SHORT).show();
-                                }
-                            }
-
-                            @Override
-                            public void onDenied(List<String> permissions, boolean doNotAskAgain) {
-                                if (doNotAskAgain) {
-                                    Toast.makeText(context, "已拒绝外部存储读写权限，请手动授予", Toast.LENGTH_SHORT).show();
-                                    XXPermissions.startPermissionActivity(context, permissions);
-                                } else {
-                                    Toast.makeText(context, "已拒绝外部存储读写权限", Toast.LENGTH_SHORT).show();
-                                }
-                            }
-                        });
-                dialog.dismiss();
-            }
-        });
-
-        builder.setNegativeButton("拒绝", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                // 在此处添加拒绝权限的逻辑
-                Toast.makeText(context, "已拒绝权限", Toast.LENGTH_SHORT).show();
-                dialog.dismiss();
-            }
-        });
-
-        AlertDialog dialog = builder.create();
-        dialog.show();
-    }
-
     public static boolean isAvailableRedPacket(Object redPacketContent) {
         try {
             if (redPacketContent == null) {

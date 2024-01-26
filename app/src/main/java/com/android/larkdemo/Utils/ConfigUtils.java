@@ -133,6 +133,7 @@ public class ConfigUtils {
 
     public ConfigObject getConfigInApp() {
         ConfigObject configObject = null;
+        xSharedPreferences.reload();
         try {
             configObject = new ConfigObject(
                     xSharedPreferences.getBoolean("isMoudleEnable", false),
@@ -143,6 +144,7 @@ public class ConfigUtils {
                     xSharedPreferences.getString("muteKeyword", ""),
                     xSharedPreferences.getBoolean("fetchMode", false)
             );
+            LogUtil.PrintLog("getConfigInApp" + configObject.toString(), TAG);
         } catch (Exception e) {
             Log.i(TAG, "getConfigInApp: " + e.getMessage());
         }

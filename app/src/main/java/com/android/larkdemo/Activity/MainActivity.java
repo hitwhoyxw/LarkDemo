@@ -1,28 +1,19 @@
 package com.android.larkdemo.Activity;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.ConstraintLayout;
 
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Switch;
-import android.widget.TextView;
 
 import com.android.larkdemo.R;
 import com.android.larkdemo.Utils.ConfigObject;
 import com.android.larkdemo.Utils.ConfigUtils;
-import com.android.larkdemo.Utils.HookUtils;
-import com.android.larkdemo.Utils.MyCallback;
 
 public class MainActivity extends AppCompatActivity {
 

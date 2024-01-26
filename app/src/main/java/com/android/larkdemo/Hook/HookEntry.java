@@ -6,35 +6,31 @@ import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 
 import com.android.larkdemo.Utils.ConfigObject;
 import com.android.larkdemo.Utils.ConfigUtils;
 import com.android.larkdemo.Utils.HookUtils;
 import com.android.larkdemo.Utils.LogUtil;
-import com.android.larkdemo.Utils.MyCallback;
 import com.google.gson.Gson;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 
 import dalvik.system.DexClassLoader;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XSharedPreferences;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
@@ -52,7 +48,7 @@ public class HookEntry implements IXposedHookLoadPackage {
     private static String finance_sdk_version = null;
     private static DexClassLoader pluginDexClassLoader = null;
 
-    private boolean isOpenByModule = false;
+    private AtomicBoolean isOpenByModule = new AtomicBoolean(false);
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
@@ -150,7 +146,12 @@ public class HookEntry implements IXposedHookLoadPackage {
                         @Override
                         public void run() {
                             try {
+                                if (isOpenByModule.get()) {
+                                    LogUtil.PrintLog("already running a task,return ", TAG);
+                                    return;
+                                }
                                 view.performClick();
+                                isOpenByModule.set(true);
                             } catch (Exception e) {
                                 LogUtil.PrintLog("error occued in HookOpenRedpacket" + e.getMessage(), TAG);
                             }
@@ -160,72 +161,50 @@ public class HookEntry implements IXposedHookLoadPackage {
                 } catch (Exception e) {
                     LogUtil.PrintLog("error occued in HookOpenRedpacket" + e.getMessage(), TAG);
                 }
-                isOpenByModule = true;
             }
         });
-        XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.detail.RedPacketDetailActivity", dexClassLoader, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
+        Class redPacketInfoCls = findClass("com.ss.android.lark.money.redpacket.dto.RedPacketInfo", dexClassLoader);
+        XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.detail.RedPacketDetailView", dexClassLoader, "x32_c", redPacketInfoCls, new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) {
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 try {
-                    Object activity = param.thisObject;
-                    View view = ((Activity) activity).findViewById(android.R.id.content);
-                    @SuppressLint("ResourceType") ImageView imageView = view.findViewById(11143);
-                    if (imageView == null) {
-                        LogUtil.PrintLog("HookOpenRedpacket imageView is null", TAG);
+                    Object view = param.thisObject;
+                    Field mDialogOpenIV = view.getClass().getDeclaredField("mDialogOpenIV");
+                    if (mDialogOpenIV == null) {
+                        LogUtil.PrintLog("mDialogOpenIV is null", TAG);
                         return;
                     }
-                    //延迟点击open，判断是否可见
-                    if (imageView.getVisibility() == View.VISIBLE) {
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    Thread.sleep(50);
-                                    ((Activity) activity).runOnUiThread(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            imageView.performClick();
-                                        }
-                                    });
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
+                    mDialogOpenIV.setAccessible(true);
+                    ImageView imageView = (ImageView) mDialogOpenIV.get(view);
+                    if (imageView == null) {
+                        LogUtil.PrintLog("imageView is null", TAG);
+                        return;
+                    }
+                    imageView.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (imageView.getVisibility() != View.VISIBLE) {
+                                LogUtil.PrintLog("imageView is not visible", TAG);
+                                return;
                             }
-                        }).start();
-                    }
-                    //如果不可见，如果是手动打开，不管，否则，关闭activity
-                    else {
-                        if (isOpenByModule) {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        Thread.sleep(50);
-                                        ((Activity) activity).runOnUiThread(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                try {
-                                                    activity.getClass().getMethod("finish").invoke(activity);
-                                                } catch (IllegalAccessException e) {
-                                                    e.printStackTrace();
-                                                } catch (InvocationTargetException e) {
-                                                    e.printStackTrace();
-                                                } catch (NoSuchMethodException e) {
-                                                    e.printStackTrace();
-                                                }
-                                                isOpenByModule = false;
-                                            }
-                                        });
-                                    } catch (InterruptedException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            }).start();
+                            imageView.performClick();
+                            if (isOpenByModule.get()) {
+                                LogUtil.PrintLog("finish a task success", TAG);
+                                isOpenByModule.set(false);
+                            }
                         }
+                    }, 50);
+                } catch (NoSuchFieldError noSuchFieldError) {
+                    LogUtil.PrintLog("NoSuchFieldError", TAG);
+                } catch (ClassCastException classCastException) {
+                    LogUtil.PrintLog("ClassCastException", TAG);
+                } finally {
+                    if (isOpenByModule.get()) {
+                        LogUtil.PrintLog("finish a task although failed", TAG);
+                        isOpenByModule.set(false);
                     }
-                } catch (Exception e) {
-                    LogUtil.PrintLog("error occued in HookOpenRedpacket" + e.getMessage(), TAG);
                 }
+
             }
         });
     }
