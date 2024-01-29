@@ -20,7 +20,6 @@ public class ConfigUtils {
 
     private SharedPreferences sharedPreferences;
     private XSharedPreferences xSharedPreferences;
-    private XSharedPreferences.OnSharedPreferenceChangeListener listener;
     public static ConfigUtils instance;
 
     private ConfigUtils() {
@@ -51,41 +50,6 @@ public class ConfigUtils {
 
     public SharedPreferences getSharedPreferences() {
         return sharedPreferences != null ? sharedPreferences : null;
-    }
-
-    public void setOnSharedPreferenceChangeListener(XSharedPreferences.OnSharedPreferenceChangeListener listener) {
-        if (sharedPreferences != null) {
-            sharedPreferences.registerOnSharedPreferenceChangeListener(listener);
-        }
-    }
-
-    public void setOnSharedPreferenceChangeListener() {
-        if (null == listener) {
-            listener = new XSharedPreferences.OnSharedPreferenceChangeListener() {
-                @Override
-                public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-                    LogUtil.PrintLog("onSharedPreferenceChanged", TAG);
-                    ((XSharedPreferences) sharedPreferences).reload();
-                }
-            };
-        }
-        if (xSharedPreferences != null) {
-            LogUtil.PrintLog("setOnSharedPreferenceChangeListener", TAG);
-            xSharedPreferences.registerOnSharedPreferenceChangeListener(listener);
-        }
-    }
-
-    public void unSetOnSharedPreferenceChangeListener(SharedPreferences.OnSharedPreferenceChangeListener listener) {
-        if (xSharedPreferences != null && listener != null) {
-            xSharedPreferences.unregisterOnSharedPreferenceChangeListener(listener);
-        }
-    }
-
-    public void unSetOnSharedPreferenceChangeListener() {
-        if (xSharedPreferences != null && listener != null) {
-            LogUtil.PrintLog("unSetOnSharedPreferenceChangeListener", TAG);
-            xSharedPreferences.unregisterOnSharedPreferenceChangeListener(listener);
-        }
     }
 
     public void saveConfig(ConfigObject configObject) {

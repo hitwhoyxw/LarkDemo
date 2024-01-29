@@ -66,7 +66,6 @@ public class HookEntry implements IXposedHookLoadPackage {
                         return;
                     }
                     initConfigSetting(null);
-                    HookCancelListener();
                     ConfigObject configObject = configUtils.getConfig(false);
                     if (configObject == null || !configObject.isMoudleEnable) {
                         LogUtil.PrintLog("configObject is null or moudle is disable", TAG);
@@ -92,14 +91,6 @@ public class HookEntry implements IXposedHookLoadPackage {
         LogUtil.PrintLog("finance_sdk_version = " + finance_sdk_version, TAG);
     }
 
-    public void HookCancelListener() {
-        findAndHookMethod(Application.class, "onTerminate", new XC_MethodHook() {
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                LogUtil.PrintLog("onTerminate", TAG);
-                configUtils.unSetOnSharedPreferenceChangeListener();
-            }
-        });
-    }
 
     public void RedpacketMsgHook(ClassLoader dexClassLoader) {
 
@@ -193,7 +184,7 @@ public class HookEntry implements IXposedHookLoadPackage {
                                 return;
                             }
                             imageView.performClick();
-                            
+
                             LogUtil.PrintLog("finish a task success", TAG);
                             if (isOpenByModule.get()) {
                                 LogUtil.PrintLog("finish a task success", TAG);
@@ -572,7 +563,6 @@ public class HookEntry implements IXposedHookLoadPackage {
         try {
             configUtils = ConfigUtils.getInstance();
             configUtils.init(false, null);
-            configUtils.setOnSharedPreferenceChangeListener();
         } catch (Exception e) {
             LogUtil.PrintLog("initConfigSetting error:" + e.getMessage(), "initConfigSetting");
         }
