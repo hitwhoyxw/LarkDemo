@@ -25,6 +25,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -121,13 +122,14 @@ public class HookEntry implements IXposedHookLoadPackage {
                     Class cVarClass = cVar.getClass();
                     Object al = cVarClass.getMethod("al").invoke(cVar);
                     Object redpacketContent = al.getClass().getMethod("E").invoke(al);
-                    if (!HookUtils.isAvailableRedPacket(redpacketContent)) {
+                    if (!HookUtils.canFetch(redpacketContent, configUtils.getConfig(false))) {
                         LogUtil.PrintLog("HookOpenRedpacket not available redPacketContent", TAG);
                         return;
                     }
                     View view = (View) viewHolder.getClass().getMethod("a").invoke(viewHolder);
                     if (view == null) {
                         LogUtil.PrintLog("HookOpenRedpacket view is null", TAG);
+                        isOpenByModule.set(false);
                         return;
                     }
                     int mSec = 0;
@@ -160,20 +162,23 @@ public class HookEntry implements IXposedHookLoadPackage {
     }
 
     public void HookMockGrabAndClose(ClassLoader dexClassLoader) {
+        Class redpacketDetailViewCls = findClass("com.ss.android.lark.money.redpacket.detail.RedPacketDetailView", dexClassLoader);
         Class redPacketInfoCls = findClass("com.ss.android.lark.money.redpacket.dto.RedPacketInfo", dexClassLoader);
-        XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.detail.RedPacketDetailView", dexClassLoader, "x32_c", redPacketInfoCls, new XC_MethodHook() {
+        XposedHelpers.findAndHookMethod(redpacketDetailViewCls, "x32_c", redPacketInfoCls, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
                 try {
                     Object view = param.thisObject;
                     Field mDialogOpenIV = view.getClass().getDeclaredField("mDialogOpenIV");
-
+                    Field mCloseTitleIV = view.getClass().getDeclaredField("mCloseTitleIV");
                     if (mDialogOpenIV == null) {
                         LogUtil.PrintLog("mDialogOpenIV is null", TAG);
                         return;
                     }
                     mDialogOpenIV.setAccessible(true);
+                    mCloseTitleIV.setAccessible(true);
                     ImageView imageView = (ImageView) mDialogOpenIV.get(view);
+                    ImageView closeTitleIV = (ImageView) mCloseTitleIV.get(view);
                     if (imageView == null) {
                         LogUtil.PrintLog("imageView is null", TAG);
                         return;
@@ -190,47 +195,33 @@ public class HookEntry implements IXposedHookLoadPackage {
                         }
                     }, 50);
 
-                } catch (NoSuchFieldException noSuchFieldError) {
-                    LogUtil.PrintLog("NoSuchFieldError HookMockGrabAndClose", TAG);
-                } catch (ClassCastException classCastException) {
-                    LogUtil.PrintLog("ClassCastException HookMockGrabAndClose", TAG);
-                } catch (IllegalAccessException e) {
-                    LogUtil.PrintLog("IllegalAccessException HookMockGrabAndClose", TAG);
-                }
-
-            }
-        });
-
-        XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.detail.RedPacketDetailView$10", dexClassLoader, "onTransitionEnd", android.transition.Transition.class, new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) {
-                try {
-                    Object view = param.thisObject;
-                    Field mCloseTitleIV = view.getClass().getDeclaredField("mCloseTitleIV");
-                    mCloseTitleIV.setAccessible(true);
-                    ImageView closeTitleIV = (ImageView) mCloseTitleIV.get(view);
-                    closeTitleIV.postDelayed(new Runnable() {
+                    XposedHelpers.findAndHookMethod("com.ss.android.lark.money.redpacket.detail.RedPacketDetailView$10", dexClassLoader, "onTransitionEnd", android.transition.Transition.class, new XC_MethodHook() {
                         @Override
-                        public void run() {
-                            if (closeTitleIV.getVisibility() != View.VISIBLE) {
-                                LogUtil.PrintLog("closeTitleIV is not visible", TAG);
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            if (closeTitleIV == null) {
+                                LogUtil.PrintLog("closeTitleIV is null", TAG);
                                 return;
                             }
-                            if (isOpenByModule.get()) {
-                                LogUtil.PrintLog("open by module need auto close", TAG);
-                                closeTitleIV.performClick();
-                                return;
-                            }
-                            isOpenByModule.set(false);
-                            LogUtil.PrintLog("finish a task success,set false", TAG);
+                            closeTitleIV.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (!isOpenByModule.get()) {
+                                        LogUtil.PrintLog("isOpenByModule is false", TAG);
+                                        return;
+                                    }
+                                    if (closeTitleIV.getVisibility() != View.VISIBLE) {
+                                        LogUtil.PrintLog("closeTitleIV is not visible", TAG);
+                                        return;
+                                    }
+                                    closeTitleIV.performClick();
+                                    isOpenByModule.set(false);
+                                    LogUtil.PrintLog("finish a task success,set false", TAG);
+                                }
+                            }, 50);
                         }
-                    }, 50);
-                } catch (NoSuchFieldException noSuchFieldError) {
-                    LogUtil.PrintLog("NoSuchFieldError HookMockGrabAndClose", TAG);
-                } catch (ClassCastException classCastException) {
-                    LogUtil.PrintLog("ClassCastException HookMockGrabAndClose", TAG);
-                } catch (IllegalAccessException e) {
-                    LogUtil.PrintLog("IllegalAccessException HookMockGrabAndClose", TAG);
+                    });
+                } catch (Exception e) {
+                    LogUtil.PrintLog("error occued in HookMockGrabAndClose" + e.getMessage(), TAG);
                 }
             }
         });
