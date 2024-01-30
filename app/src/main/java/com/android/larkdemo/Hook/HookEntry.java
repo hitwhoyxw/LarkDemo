@@ -67,19 +67,14 @@ public class HookEntry implements IXposedHookLoadPackage {
                         return;
                     }
                     initConfigSetting(null);
-                    ConfigObject configObject = configUtils.getConfig(false);
-                    if (configObject == null || !configObject.isMoudleEnable) {
-                        LogUtil.PrintLog("configObject is null or moudle is disable", TAG);
-                        return;
-                    }
-                    if (configObject.fetchMode) {
-                        hookConfigSetting(dexClassLoader);
-                        RedpacketMsgHook(dexClassLoader);
-                    } else {
-                        HookOpenRedpacket(dexClassLoader);
-                        HookMockGrabAndClose(dexClassLoader);
-                    }
-                    LogUtil.PrintLog("HookEntry handleLoadPackage currentMode " + (configObject.fetchMode ? "直接请求" : "模拟点击"), TAG);
+                    //fetchmode==ture
+                    hookConfigSetting(dexClassLoader);
+                    RedpacketMsgHook(dexClassLoader);
+
+                    //fetchmode==false
+                    HookOpenRedpacket(dexClassLoader);
+                    HookMockGrabAndClose(dexClassLoader);
+
                 }
             });
 
@@ -95,16 +90,20 @@ public class HookEntry implements IXposedHookLoadPackage {
 
 
     public void RedpacketMsgHook(ClassLoader dexClassLoader) {
-
         Class entityClass = findClass("com.bytedance.lark.pb.basic.v1.Entity", dexClassLoader);
         Class contentClass = findClass("com.bytedance.lark.pb.basic.v1.Content", dexClassLoader);
         XposedHelpers.findAndHookMethod("com.ss.android.lark.parser.internal.p", dexClassLoader, "a", entityClass, contentClass, java.lang.String.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                ConfigObject configObject = configUtils.getConfig(false);
+                if (configObject == null || configObject.isMoudleEnable == false || configObject.fetchMode == false) {
+                    LogUtil.PrintLog("当前配置非直接模式", TAG);
+                    return;
+                }
                 String chatId = (String) param.args[2];
                 Object redPacketContent = param.getResult();
                 LogUtil.PrintLog("redPacketContent:" + HookUtils.getObjectString(redPacketContent), TAG);
-                fetchRedpacketByConfig(redPacketContent, configUtils.getConfig(false), dexClassLoader, chatId);
+                fetchRedpacketByConfig(redPacketContent, configObject, dexClassLoader, chatId);
             }
         });
     }
@@ -116,6 +115,11 @@ public class HookEntry implements IXposedHookLoadPackage {
         XposedHelpers.findAndHookMethod("com.ss.android.lark.chat.chatwindow.chat.message.cell.redpacket.RedPacketMessageCell", dexClassLoader, "a", viewHolderClass, voClass, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
+                ConfigObject configObject = configUtils.getConfig(false);
+                if (configObject == null || configObject.isMoudleEnable == false || configObject.fetchMode == true) {
+                    LogUtil.PrintLog("当前配置非模拟模式", TAG);
+                    return;
+                }
                 try {
                     Object viewHolder = param.args[0];
                     Object cVar = param.args[1];
@@ -133,7 +137,6 @@ public class HookEntry implements IXposedHookLoadPackage {
                         return;
                     }
                     int mSec = 0;
-                    ConfigObject configObject = configUtils.getConfig(false);
                     if (configObject.isDelayEnable) {
                         mSec = HookUtils.getRandDelayTime(configObject);
                         LogUtil.PrintLog("delay grab time = " + mSec, TAG);

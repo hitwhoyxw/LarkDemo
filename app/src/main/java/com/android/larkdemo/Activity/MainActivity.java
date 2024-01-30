@@ -10,6 +10,7 @@ import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Switch;
+import android.widget.Toast;
 
 import com.android.larkdemo.R;
 import com.android.larkdemo.Utils.ConfigObject;
@@ -110,6 +111,7 @@ public class MainActivity extends AppCompatActivity {
                     muteKeywordEditText.getText().toString(),
                     rBtnGroup.getCheckedRadioButtonId() == R.id.rBtn_direct
             );
+            Toast.makeText(this, object.toString(), Toast.LENGTH_SHORT).show();
             configUtils.saveConfig(object);
         } catch (NullPointerException e) {
             Log.i(TAG, "saveAllConfig" + e.getMessage());

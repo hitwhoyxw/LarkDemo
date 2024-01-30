@@ -1,5 +1,7 @@
 package com.android.larkdemo.Utils;
 
+import androidx.annotation.NonNull;
+
 public class ConfigObject {
     public boolean isMoudleEnable;
     public boolean isDelayEnable;
@@ -40,5 +42,19 @@ public class ConfigObject {
 
     public ConfigObject() {
 
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return "ConfigObject{" +
+                "isMoudleEnable=" + isMoudleEnable +
+                ", isDelayEnable=" + isDelayEnable +
+                ", isMuteEnable=" + isMuteEnable +
+                ", delayTimeMin=" + delayTimeMin +
+                ", daleyTimeMax=" + daleyTimeMax +
+                ", muteKeyword='" + muteKeyword + '\'' +
+                ", fetchMode=" + fetchMode +
+                '}';
     }
 }
