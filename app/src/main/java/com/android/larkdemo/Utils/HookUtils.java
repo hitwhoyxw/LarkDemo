@@ -1,27 +1,16 @@
 package com.android.larkdemo.Utils;
 
-import android.app.AlertDialog;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.widget.Toast;
-
-import androidx.fragment.app.Fragment;
-
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.hjq.permissions.OnPermissionCallback;
-import com.hjq.permissions.Permission;
-import com.hjq.permissions.XXPermissions;
 
 import java.lang.reflect.Field;
-import java.util.List;
 import java.util.Random;
 
 public class HookUtils {
-    public static String XPOSED_HOOK_PACKAGE = "com.ss.android.lark";
-    public static String XPOSED_HOOK_PACKAGE1 = "com.alibaba.android.rimet";
+    public static String XPOSED_HOOK_PACKAGE_LARK = "com.ss.android.lark";
+    public static String XPOSED_HOOK_PACKAGE_QQ = "com.alibaba.android.rimet";
     public static Gson gson = new Gson();
 
     public static String readConfig(String key) {

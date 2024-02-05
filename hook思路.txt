@@ -172,3 +172,9 @@ XposedHelpers.findAndHookMethod("com.ss.android.lark.parser.internal.o", classLo
 
 MessageParser com.ss.android.lark.biz.im.api.extension.d
 ThreadMessageVO类重写了 com.ss.android.lark.chat.export.vo.c的方法，可以分析下每个方法返回的值代表什么
+
+
+
+
+qq版
+grabhbactivity关键词 找不到，估计也是插件加载

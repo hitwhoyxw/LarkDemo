@@ -1,14 +1,10 @@
 package com.android.larkdemo.Hook;
 
 
-import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageView;
 
 import com.android.larkdemo.Utils.ConfigObject;
@@ -22,10 +18,8 @@ import com.google.gson.JsonObject;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -55,7 +49,7 @@ public class HookEntry implements IXposedHookLoadPackage {
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
-        if (loadPackageParam.packageName.equals(HookUtils.XPOSED_HOOK_PACKAGE)) {
+        if (loadPackageParam.packageName.equals(HookUtils.XPOSED_HOOK_PACKAGE_LARK)) {
             ClassLoader classLoader = loadPackageParam.classLoader;
             XposedBridge.log(TAG + " has Hooked!");
             findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
@@ -78,7 +72,13 @@ public class HookEntry implements IXposedHookLoadPackage {
                 }
             });
 
+        } else if (loadPackageParam.packageName.equals(HookUtils.XPOSED_HOOK_PACKAGE_QQ)) {
+            ClassLoader classLoader = loadPackageParam.classLoader;
+            XposedBridge.log(TAG + "qq has Hooked!");
+
+
         }
+
     }
 
     public void hookConfigSetting(ClassLoader dexClassLoader) {
